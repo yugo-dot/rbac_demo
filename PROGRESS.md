@@ -61,6 +61,10 @@ rbac_demo/
 │       │   └── role_permission.py
 │       ├── permissions.py       (HasPerm)
 │       └── migrations/
+│   └── articles/
+│       ├── views.py             (ArticleDemoView)
+│       ├── urls.py
+│       └── tests.py
 ├── config/
 │   └── settings.py
 ├── Dockerfile
@@ -87,6 +91,7 @@ rbac_demo/
 - [x] JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
 - [x] 角色 / 权限的 CRUD 接口 (ModelViewSet + DefaultRouter)
 - [x] 自定义权限类 HasPerm (支持 list / dict, 超管放行)
+- [x] 示例接口 + RBAC 保护验证 (手动 curl + 单元测试)
 
 ## 六、Git 提交记录
 
@@ -107,7 +112,7 @@ rbac_demo/
 2. [x] 写 JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
 3. [x] 写角色 / 权限的 CRUD 接口
 4. [x] 写自定义权限类 HasPerm
-5. [ ] 用 RBAC 保护示例接口, 写测试验证
+5. [x] 用 RBAC 保护示例接口, 写测试验证
 
 ## 八、当前卡点
 
@@ -143,6 +148,8 @@ cat config/settings.py
 - models 拆成包: 每个实体一个文件, __init__.py 统一导出, Django 通过导入发现模型
 - 权限编码格式: 模块:操作 (article:create)
 - 关联表暂不用 Django 自带 auth_group / auth_permission, 用自己的 rbac 表
+- 注意: User.email 是 unique, create_user 不传 email 会写 '' 导致第二个用户冲突;
+  代码里创建用户时要么传真实 email, 要么显式传 None
 
 ## 十二、协作方式约定
 

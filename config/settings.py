@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     # 业务 app
     'users',
     'rbac',
+    'articles',
 ]
 
 MIDDLEWARE = [
