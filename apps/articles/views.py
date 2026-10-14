@@ -1,3 +1,4 @@
+from django.db.models import Q
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
@@ -38,16 +39,29 @@ class ArticleViewSet(ModelViewSet):
     def get_queryset(self):
         """列表/详情查询集: 按 ABAC 规则过滤.
 
-        普通用户只能看自己写的 + 已发布的, 超管看全部.
+        优化思路 (DB 粗筛 + Casbin 精筛):
+        - 作者本人 / 已发布: 策略上必然可见, 直接放行, 不跑 enforce
+        - 其余行: 才逐行 enforce
+        注意: 粗筛条件是策略的"软编码", 策略变更时需同步改这里.
         """
         qs = Article.objects.select_related("author").all()
         user = self.request.user
         if user.is_superuser:
             return qs
 
+        # 粗筛: 这两类命中策略里的宽松条件, 无需 enforce
+        coarse_ids = set(
+            qs.filter(Q(author=user) | Q(status=Article.STATUS_PUBLISHED)).values_list(
+                "id", flat=True
+            )
+        )
+
+        # 剩余行 (非作者本人 且 非已发布) 才跑 enforce
         sub = build_sub(user)
-        visible_ids = [a.id for a in qs if enforce(sub, a.to_abac_obj(), "read")]
-        return qs.filter(id__in=visible_ids)
+        rest = qs.exclude(id__in=coarse_ids)
+        extra_ids = {a.id for a in rest if enforce(sub, a.to_abac_obj(), "read")}
+
+        return qs.filter(id__in=coarse_ids | extra_ids)
 
     def perform_create(self, serializer):
         """创建时作者固定为当前用户."""

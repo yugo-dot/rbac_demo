@@ -43,37 +43,32 @@
 - [x] CasbinRule 模型声明 (修幽灵迁移, Django 不再生成 DeleteModel)
 - [x] Django admin 注册 (8 个模型; 内置角色/权限只读 + 审计日志全只读)
 - [x] 演示数据种子命令 (seed_demo: 10 用户 / 4 角色 / 2000 文章, 幂等 + --flush)
+- [x] ABAC 性能优化 (DB 粗筛 + Casbin 精筛; enforce 2000 -> 1180 次, 0.41s -> 0.27s)
 
 ## 二、下一步
 
 第一阶段 (基础 RBAC 闭环) + 第二阶段 (ABAC + 审计 + CI + admin) 已完成.
 以下候选方向 (未开始, 排序即推荐顺序):
 
-1. [ ] ABAC 性能优化
-   - 现状: articles/views.py 的 get_queryset 里逐行调 enforce(), 2000 篇时 N 次判定
-   - 目标: DB 层 Q 对象粗筛 + Casbin 精筛, 减少 enforce 次数
-   - 参考: apps/rbac/abac.py 的 build_sub, articles/views.py 的 get_queryset
-   - 数据: 已 seed 2000 篇 (seed_demo), 可直接测性能差异
-
-2. [ ] 用户资料修改接口
+1. [ ] 用户资料修改接口
    - 现状: GET /api/users/me/ 只读, 不能改 nickname / avatar / bio 等
    - 目标: 加 PATCH /api/users/me/, 支持改 UserProfile 字段
 
-3. [ ] 权限点按模块分组
+2. [ ] 权限点按模块分组
    - 现状: Permission 没有 module 字段, 靠命名约定 (rbac:role:read)
    - 目标: 加 module 字段, 前端可按模块折叠展示
 
-4. [ ] 数据级权限细化 (visibility)
+3. [ ] 数据级权限细化 (visibility)
    - 现状: Article 有 visibility 字段 (private/team/public), 但策略没用它
    - 目标: 加策略, 让 visibility 真正影响可见性
 
-5. [ ] CI 通知 (搁置)
+4. [ ] CI 通知 (搁置)
    - 曾尝试 PushPlus / Server酱, 都因收费或额度放弃
    - 可选: Server酱 免费版 (每天 5 条) 或不做
 
 ## 补充说明 (给接手的 AI)
 
-- 上一阶段刚做完: Django admin 注册 + 演示数据种子命令 (seed_demo)
+- 上一阶段刚做完: ABAC 性能优化 (DB 粗筛 + Casbin 精筛)
 - 远端: origin=Gitee, github=GitHub, 两边都推
 - CI: GitHub Actions 已跑通 (63 测试, ~1.5 分钟)
 - 本地测试命令: docker compose exec web python manage.py test users rbac articles

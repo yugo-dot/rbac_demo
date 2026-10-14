@@ -376,6 +376,15 @@ cat docker-compose.yml
   - 幂等: 用户/角色 get_or_create; 文章已有则跳过 (要重造加 --flush)
   - 用 bulk_create(batch_size=500) 批量插文章
   - seed 后遍历用户清权限缓存 (invalidate_user_perms)
+- ABAC 性能优化 (get_queryset 粗筛 + 精筛):
+  - 原写法: 拉全量 -> 逐行 enforce -> id__in 回查, 2000 篇约 0.41s
+  - 优化后: 先用 Q 粗筛"作者本人 / 已发布"(策略上必然可见), 只对剩余行 enforce
+  - 效果: enforce 2000 -> 1180 次, 0.41s -> 0.27s, 可见结果一致
+  - 代价: 粗筛条件是策略的"软编码"(Q 对象写死 author/published),
+    策略变更时需同步改 get_queryset, 属主流取舍 (完全动态则无法下推到 DB)
+  - 未继续优化的原因: 剩余 1180 行按当前策略无法在 DB 层判定不可见,
+    再压需把 Casbin 策略翻译成 SQL WHERE, 复杂度高且非主流
+  - 后续真实项目应配分页 (只对当前页精筛), 而非继续抠单次 enforce 常数
 
 ## 八、协作方式约定
 
