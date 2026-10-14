@@ -98,6 +98,8 @@ rbac_demo/
 - dec6c94 feat: JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
 - e6616ce docs: PROGRESS.md 补充 commit 记录
 - fb950b6 feat: 角色 / 权限 CRUD 接口 (ModelViewSet + DefaultRouter)
+- af8d801 docs: PROGRESS.md 补充 commit 记录
+- 354815d feat: 自定义权限类 HasPerm
 
 ## 七、下一步
 
