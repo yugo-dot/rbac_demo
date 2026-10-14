@@ -44,12 +44,40 @@
 
 ## 二、下一步
 
-第一阶段 (基础 RBAC 闭环) 已完成. 后续候选方向 (排序即推荐顺序):
+第一阶段 (基础 RBAC 闭环) + 第二阶段 (ABAC + 审计 + CI) 已完成.
+以下候选方向 (未开始, 排序即推荐顺序):
 
-1. [x] 内置角色/权限保护 (is_builtin 标记, 禁止删改)
-2. [x] 用户注册 / 改密 / 刷新 token 接口 (+ 登出)
-3. [x] ABAC 数据级权限 (Casbin, articles 落地)
-4. [x] 接 pre-commit (ruff), CI 待推 Gitee 时再加
+1. [ ] ABAC 性能优化
+   - 现状: articles/views.py 的 get_queryset 里逐行调 enforce(), N 次判定
+   - 目标: DB 层 Q 对象粗筛 + Casbin 精筛, 减少 enforce 次数
+   - 参考: apps/rbac/abac.py 的 build_sub, articles/views.py 的 get_queryset
+
+2. [ ] Django admin 处理
+   - 现状: /admin/ 独立于 RBAC, rbac 模型没注册
+   - 目标: 把 Role / Permission / UserRole / AuditLog 注册进 admin, 供管理员用
+
+3. [ ] 用户资料修改接口
+   - 现状: GET /api/users/me/ 只读, 不能改 nickname / avatar / bio 等
+   - 目标: 加 PATCH /api/users/me/, 支持改 UserProfile 字段
+
+4. [ ] 权限点按模块分组
+   - 现状: Permission 没有 module 字段, 靠命名约定 (rbac:role:read)
+   - 目标: 加 module 字段, 前端可按模块折叠展示
+
+5. [ ] 数据级权限细化 (visibility)
+   - 现状: Article 有 visibility 字段 (private/team/public), 但策略没用它
+   - 目标: 加策略, 让 visibility 真正影响可见性
+
+6. [ ] CI 通知 (搁置)
+   - 曾尝试 PushPlus / Server酱, 都因收费或额度放弃
+   - 可选: Server酱 免费版 (每天 5 条) 或不做
+
+## 补充说明 (给接手的 AI)
+
+- 上一阶段刚做完: 审计日志 (AuditLog + log_action + 4 个 ViewSet 挂钩)
+- 远端: origin=Gitee, github=GitHub, 两边都推
+- CI: GitHub Actions 已跑通 (63 测试, ~1.5 分钟)
+- 本地测试命令: docker compose exec web python manage.py test users rbac articles
 
 ## 三、当前卡点
 
