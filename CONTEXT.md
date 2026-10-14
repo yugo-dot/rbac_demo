@@ -147,6 +147,9 @@ pre-commit run --all-files         # 手动全量跑一遍 ruff
 
 新 AI 需要知道当前代码长什么样. 交接时请用户执行以下命令, 把输出贴给你:
 
+# Casbin 模型定义
+cat casbin_model.conf
+
 # 模型
 cat apps/users/models/user.py
 cat apps/users/models/profile.py
@@ -156,6 +159,7 @@ cat apps/rbac/models/role.py
 cat apps/rbac/models/permission.py
 cat apps/rbac/models/user_role.py
 cat apps/rbac/models/role_permission.py
+cat apps/articles/models.py
 
 # signals 与 app 配置
 cat apps/users/signals.py
@@ -168,6 +172,8 @@ cat apps/rbac/serializers/role.py
 cat apps/rbac/serializers/permission.py
 cat apps/rbac/serializers/user_role.py
 cat apps/rbac/serializers/role_permission.py
+cat apps/rbac/serializers/policy.py
+cat apps/articles/serializers.py
 
 # 视图
 cat apps/users/views/auth.py
@@ -175,14 +181,20 @@ cat apps/users/views/user.py
 cat apps/rbac/views/role.py
 cat apps/rbac/views/permission.py
 cat apps/rbac/views/user_role.py
+cat apps/rbac/views/policy.py
 cat apps/articles/views.py
 
-# 权限类与缓存工具
+# 权限类与 ABAC / 缓存工具
 cat apps/rbac/permissions.py
+cat apps/rbac/abac.py
 cat apps/rbac/cache.py
 
-# 种子数据
+# 数据种子 / 迁移
 cat apps/rbac/migrations/0003_seed_permissions.py
+cat apps/rbac/migrations/0004_add_is_builtin.py
+cat apps/rbac/migrations/0005_add_casbin_rule.py
+cat apps/rbac/migrations/0007_seed_casbin_policies.py
+cat apps/rbac/migrations/0008_add_policy_perms.py
 
 # 路由
 cat config/urls.py
@@ -194,6 +206,8 @@ cat apps/articles/urls.py
 cat config/settings/base.py
 cat config/settings/dev.py
 cat config/settings/prod.py
+cat pyproject.toml
+cat .pre-commit-config.yaml
 
 # 测试
 cat apps/articles/tests.py
