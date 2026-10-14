@@ -21,8 +21,8 @@ SECRET_KEY = os.environ.get(
 
 # 应用注册
 INSTALLED_APPS = [
-    # simpleui 必须在 admin 之前, 否则模板覆盖不生效
-    "simpleui",
+    # unfold 必须在 admin 之前, 否则模板覆盖不生效
+    "unfold",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -206,7 +206,11 @@ SIMPLE_JWT = {
 # 审计日志: True 时也记录 read 操作 (默认只记写)
 AUDIT_LOG_READ_OPERATIONS = False
 
-# simpleui 配置
-SIMPLEUI_HOME_INFO = False  # 首页不显示 simpleui 官方信息面板
-SIMPLEUI_ANALYSIS = False  # 关闭统计分析 (避免向 simpleui 上报)
-SIMPLEUI_LOGO = False  # 关闭左上角 logo 链接
+# django-unfold (admin 主题) 配置
+UNFOLD = {
+    "SITE_TITLE": "RBAC 管理后台",
+    "SITE_HEADER": "RBAC 管理后台",
+    "SITE_SUBHEADER": "RBAC 演示项目",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": False,
+}

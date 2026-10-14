@@ -47,6 +47,8 @@
 - [x] 用户资料修改接口 (PATCH /api/users/me/, 读写序列化器分离)
 - [x] 权限点按模块分组 (Permission.module, 从 code 自动推导 + 过滤/排序)
 - [x] 数据级权限细化 (visibility 生效: 仅 public+published 对非作者开放; team 暂等同 private)
+- [x] Django admin 换 django-unfold 主题 (含列表开关 / 操作列 / 顶部筛选 / 字段分组)
+- [x] users 测试拆成 tests/ 包 (test_api.py + test_admin.py), 补 6 个 admin 冒烟测试
 
 ## 二、下一步
 
@@ -57,9 +59,9 @@
 
 ## 补充说明 (给接手的 AI)
 
-- 上一阶段刚做完: 数据级权限细化 (visibility)
+- 上一阶段刚做完: Django admin 换 unfold 主题 + users 测试拆包
 - 远端: origin=Gitee, github=GitHub, 两边都推
-- CI: GitHub Actions 已跑通 (75 测试, ~1.5 分钟)
+- CI: GitHub Actions 已跑通 (81 测试, ~1.5 分钟)
 - 本地测试命令: docker compose exec web python manage.py test users rbac articles
 - 本地数据: 10 用户 (admin/admin + user01~09) / 4 角色 / 2000 文章 / 13 权限 / 5 Casbin 策略
 - 重造数据: docker compose exec web python manage.py seed_demo --flush --articles 2000

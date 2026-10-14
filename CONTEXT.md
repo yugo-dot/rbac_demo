@@ -20,7 +20,7 @@
 ## 一、项目背景
 
 - 目标: 学习并实战 Django + DRF 的 RBAC (基于角色的访问控制)
-- 技术栈: Django 5.1.4 / DRF 3.15 / SimpleJWT 5.3 / django-filter 24.3 / drf-spectacular 0.28 / MySQL 8.0 / Redis 7 / Docker
+- 技术栈: Django 5.2 / DRF 3.15 / SimpleJWT 5.3 / django-filter 24.3 / drf-spectacular 0.28 / MySQL 8.0 / Redis 7 / Docker
 - 权限模型: RBAC (用户-角色-权限), 后期考虑引入 ABAC 做数据级权限
 
 ## 二、环境信息
@@ -62,7 +62,10 @@ rbac_demo/
 │   │   ├── urls.py
 │   │   ├── admin.py
 │   │   ├── apps.py
-│   │   ├── tests.py
+│   │   ├── tests/
+│   │   │   ├── __init__.py
+│   │   │   ├── test_api.py      (登录 / 注册 / 改密 / me)
+│   │   │   └── test_admin.py    (admin 冒烟测试)
 │   │   └── migrations/
 │   ├── rbac/
 │   │   ├── models/
@@ -423,6 +426,22 @@ cat docker-compose.yml
   - 测试: ArticleVisibilityPolicyTests 覆盖 public/private/team 三种 visibility
     + 作者本人可见自己的 private 文章
   - 迁移后需 restart web (清 enforcer lru_cache, 让新策略生效)
+- Django admin 换 django-unfold 主题 (替代 simpleui):
+  - 升级 Django 5.1.4 -> 5.2 (unfold 0.110 要求 django>=5.2)
+  - 装 django-unfold==0.110.0, 卸 django-simpleui
+  - INSTALLED_APPS 里 unfold 放 admin 之前; TEMPLATES 加 context_processors
+  - UNFOLD 配置: SITE_TITLE / SITE_HEADER / SITE_SUBHEADER
+  - 布尔字段渲染成开关: formfield_overrides = {models.BooleanField: {widget: UnfoldBooleanSwitchWidget}}
+  - 列表页操作列: 自定义 list_display 方法 row_actions 返回 HTML (编辑/删除按钮)
+  - 筛选从右侧挪顶部: list_filter_options = {字段: {"horizontal": True}}
+  - 详情页分组: fieldsets 分 账号信息 / 权限状态 / 时间信息;
+    exclude 掉 password / groups / user_permissions (项目走 JWT, 这三个没用)
+- users 测试拆包:
+  - apps/users/tests.py -> apps/users/tests/ (包)
+  - test_api.py 原样搬入; test_admin.py 新增 6 个 admin 冒烟测试
+  - Django test runner 自动发现 test_*.py
+  - admin 冒烟测试能验证: 页面 200 / 未登录跳转 / 关键字段与按钮存在;
+    但视觉样式 (开关样式 / 筛选位置) 仍靠人眼验证
 
 ## 八、协作方式约定
 
