@@ -46,11 +46,13 @@ rbac_demo/
 │   │   │   ├── user.py          (User 继承 AbstractUser)
 │   │   │   └── profile.py       (UserProfile, OneToOne 关联 User)
 │   │   ├── serializers/
-│   │   │   ├── __init__.py      (导出 LoginSerializer)
-│   │   │   └── auth.py
+│   │   │   ├── __init__.py      (导出 LoginSerializer / MeSerializer)
+│   │   │   ├── auth.py
+│   │   │   └── user.py          (MeSerializer)
 │   │   ├── views/
-│   │   │   ├── __init__.py      (导出 LoginView)
-│   │   │   └── auth.py
+│   │   │   ├── __init__.py      (导出 LoginView / MeView)
+│   │   │   ├── auth.py
+│   │   │   └── user.py          (MeView)
 │   │   ├── signals.py           (post_save -> 自动建 Profile)
 │   │   ├── urls.py
 │   │   ├── admin.py
@@ -119,6 +121,7 @@ rbac_demo/
 - [x] 角色 / 权限的 CRUD 接口 (ModelViewSet + DefaultRouter)
 - [x] 自定义权限类 HasPerm (支持 list / dict, 超管放行)
 - [x] 示例接口 + RBAC 保护验证 (app: articles, 手动 curl + 单元测试)
+- [x] 当前用户信息接口 GET /api/users/me/ (返回资料 + 权限编码)
 
 ## 六、Git 提交记录
 
@@ -135,14 +138,14 @@ rbac_demo/
 - 46336a1 feat: 示例文章接口 + RBAC 保护验证 (手动 + 单元测试)
 - 1aa3d5e docs: PROGRESS.md 补充 commit 记录
 - b3f41a3 docs: 重写 PROGRESS.md, 与实际代码对齐
-- 87a2f13 feat: 拆分 UserProfile, 展示类字段从 User 移出
+- 9a990f4 feat: 拆分 UserProfile, 展示类字段从 User 移出
 
 ## 七、下一步
 
 第一阶段 (基础 RBAC 闭环) 已完成. 后续可做方向 (排序即推荐顺序):
 
 1. [ ] 用户 - 角色 / 角色 - 权限 分配接口 (补齐管理面)
-2. [ ] 当前用户信息接口 GET /api/users/me/ (返回资料 + 权限编码)
+2. [x] 当前用户信息接口 GET /api/users/me/ (返回资料 + 权限编码)
 3. [ ] Redis 缓存 get_permission_codes()
 4. [ ] 接 django-filter + 分页, 完善列表接口
 5. [ ] 接 shared-nginx 对外暴露
@@ -183,11 +186,13 @@ cat apps/users/apps.py
 
 # 序列化器
 cat apps/users/serializers/auth.py
+cat apps/users/serializers/user.py
 cat apps/rbac/serializers/role.py
 cat apps/rbac/serializers/permission.py
 
 # 视图
 cat apps/users/views/auth.py
+cat apps/users/views/user.py
 cat apps/rbac/views/role.py
 cat apps/rbac/views/permission.py
 cat apps/articles/views.py
@@ -206,6 +211,7 @@ cat config/settings.py
 
 # 测试
 cat apps/articles/tests.py
+cat apps/users/tests.py
 
 ## 十一、设计决策记录
 
