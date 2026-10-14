@@ -71,20 +71,30 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 
 # 数据库
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": os.environ.get("DB_NAME", "rbac_demo"),
-        "USER": os.environ.get("DB_USER", "rbac_user"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "rbac_pass_123"),
-        "HOST": os.environ.get("DB_HOST", "mysql"),
-        "PORT": os.environ.get("DB_PORT", "3306"),
-        "OPTIONS": {
-            "charset": "utf8mb4",
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+# 本地开发 / 生产: MySQL (默认)
+# CI: SQLite (设置环境变量 USE_SQLITE=true), 因为 Gitee Go 托管环境没有 MySQL 服务
+if os.environ.get("USE_SQLITE") == "true":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.environ.get("DB_NAME", "rbac_demo"),
+            "USER": os.environ.get("DB_USER", "rbac_user"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", "rbac_pass_123"),
+            "HOST": os.environ.get("DB_HOST", "mysql"),
+            "PORT": os.environ.get("DB_PORT", "3306"),
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
+    }
 
 
 # 密码校验
@@ -118,9 +128,10 @@ AUTH_USER_MODEL = "users.User"
 # 缓存
 # 跑测试时用 locmem, 避免污染生产 Redis; 其他场景用 Redis.
 if "test" in sys.argv:
+    # 测试环境禁用缓存: 避免跨测试类的缓存污染 (用户 ID 重复 + LocMemCache 进程级)
     CACHES = {
         "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
         }
     }
 else:
