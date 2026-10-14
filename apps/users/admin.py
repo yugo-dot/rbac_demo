@@ -33,6 +33,9 @@ class UserAdmin(admin.ModelAdmin):
         "is_superuser",
         "date_joined",
     )
+    # 列表页可直接改这三个开关 (simpleui 渲染成开关控件)
+    # 注意: list_editable 的字段必须同时在 list_display 里
+    list_editable = ("is_active", "is_staff", "is_superuser")
     list_filter = ("is_active", "is_staff", "is_superuser")
     search_fields = ("username", "phone", "email")
     ordering = ("-id",)

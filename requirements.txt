@@ -9,3 +9,4 @@ drf-spectacular==0.28.0
 drf-spectacular-sidecar==2024.7.1
 casbin==1.43.0
 casbin-django-orm-adapter==1.7.0
+django-simpleui==2026.1.13
