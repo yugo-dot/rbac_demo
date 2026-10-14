@@ -7,7 +7,7 @@
 
 from django.core.cache import cache
 
-from rbac.models import RolePermission, UserRole
+from rbac.models import UserRole
 
 # 缓存 key 前缀与 TTL
 PERM_CACHE_PREFIX = 'user:perms:'

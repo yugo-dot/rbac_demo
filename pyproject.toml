@@ -1,0 +1,27 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [
+    "migrations",       # 迁移文件是 Django 自动生成的, 不查
+]
+
+[tool.ruff.lint]
+# 选用的规则集:
+#   E/W   pycodestyle 基本风格
+#   F     pyflakes 未用 import / 未定义名
+#   I     isort import 排序
+#   UP    pyupgrade 旧语法升级
+#   B     flake8-bugbear 常见 bug
+#   SIM   flake8-simplify 可简化写法
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]
+
+ignore = [
+    "E501",     # 行长由 formatter 管, lint 不再重复报
+    "RUF012",   # Django/DRF 类属性 (fields / required_perms) 是惯例写法
+    "RUF022",   # __all__ 顺序, 不影响功能
+    "SIM102",   # 嵌套 if 合并, 可读性各有偏好
+]
+
+[tool.ruff.lint.isort]
+# Django 社区惯例: django / rest_framework 属第三方, 与本地包之间空行
+known-first-party = ["users", "rbac", "articles", "config"]

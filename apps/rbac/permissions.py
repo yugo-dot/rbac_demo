@@ -34,10 +34,7 @@ class HasPerm(BasePermission):
             return True
 
         # 兼容 list 和 dict 两种写法
-        if isinstance(required, dict):
-            codes = required.get(request.method, [])
-        else:
-            codes = required
+        codes = required.get(request.method, []) if isinstance(required, dict) else required
 
         # 视图没声明当前方法需要的权限 -> 放行
         if not codes:
