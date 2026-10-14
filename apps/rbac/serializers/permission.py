@@ -8,5 +8,5 @@ class PermissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Permission
-        fields = ["id", "name", "code", "description", "is_builtin", "created_at"]
-        read_only_fields = ["id", "is_builtin", "created_at"]
+        fields = ["id", "name", "code", "module", "description", "is_builtin", "created_at"]
+        read_only_fields = ["id", "module", "is_builtin", "created_at"]

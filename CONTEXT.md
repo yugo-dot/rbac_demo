@@ -394,6 +394,18 @@ cat docker-compose.yml
   - get_serializer_class 按 request.method 分派: PUT/PATCH -> MeUpdateSerializer
   - 测试: users/tests.py 的 MeViewTests 覆盖 5 个 PATCH 用例
     (未登录 / 成功 / 部分字段 / 只读字段被忽略 / gender 非法)
+- 权限点按模块分组 (Permission.module):
+  - 加 module 字段, 从 code 自动推导: 取最后一个 ":" 之前的部分
+    - article:read        -> article
+    - rbac:role:read      -> rbac:role
+    - rbac:audit_log:read -> rbac:audit_log
+  - 推导逻辑在 Permission.derive_module (静态方法) + save() 兜底 (未填才推导)
+  - 回填走 data migration (0012), 显式 set + save(update_fields=["module"]),
+    不触发自定义 save (历史模型)
+  - API 层 module 只读 (read_only_fields), 不允许手动改: module 是 code 的派生属性,
+    手改会与 code 不一致 (与 Keycloak / Casbin 的处理一致)
+  - 列表支持按 module 过滤 (?module=rbac:role) + 排序 (ordering=module)
+  - 迁移: 0011 加字段, 0012 回填
 
 ## 八、协作方式约定
 

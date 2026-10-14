@@ -189,6 +189,28 @@ class PermissionListFeatureTests(APITestCase):
         codes = [r["code"] for r in resp.data["results"]]
         self.assertEqual(codes, sorted(codes, reverse=True))
 
+    def test_module_returned_in_api(self):
+        """列表返回里应含 module 字段, 且 article:read 的 module 是 article."""
+        resp = self.client.get(self.url, {"code": "article:read"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["results"][0]["module"], "article")
+
+    def test_filter_by_module(self):
+        """按 module 过滤: ?module=article 应只返回 article 类."""
+        expected = Permission.objects.filter(module="article").count()
+        resp = self.client.get(self.url, {"module": "article"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["count"], expected)
+        for r in resp.data["results"]:
+            self.assertEqual(r["module"], "article")
+
+    def test_module_auto_derived_on_create(self):
+        """新建权限点, module 应由 code 自动推导."""
+        perm = Permission.objects.create(name="测试", code="foo:bar:baz")
+        self.assertEqual(perm.module, "foo:bar")
+        perm2 = Permission.objects.create(name="测试2", code="single")
+        self.assertEqual(perm2.module, "single")
+
 
 class BuiltinProtectionTests(APITestCase):
     """验证内置角色/权限的保护 (禁止改 code, 禁止删)."""

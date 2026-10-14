@@ -23,9 +23,9 @@ class PermissionViewSet(ModelViewSet):
     }
 
     # 过滤 / 搜索 / 排序
-    filterset_fields = ["code", "name"]
+    filterset_fields = ["code", "name", "module"]
     search_fields = ["name", "code", "description"]
-    ordering_fields = ["id", "code", "name", "created_at"]
+    ordering_fields = ["id", "code", "name", "module", "created_at"]
 
     def perform_create(self, serializer):
         """创建权限 + 审计."""
