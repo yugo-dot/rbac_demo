@@ -31,6 +31,8 @@ INSTALLED_APPS = [
     # 第三方
     'rest_framework',
     'django_filters',
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
 
     # 业务 app
     'users',
@@ -143,6 +145,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     # 分页
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -152,6 +155,21 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ),
+}
+
+
+# drf-spectacular 配置
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'RBAC Demo API',
+    'DESCRIPTION': 'Django + DRF RBAC 学习项目的接口文档',
+    'VERSION': '0.1.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    'COMPONENT_SPLIT_REQUEST': True,
+    # 使用 sidecar 提供本地静态文件, 不走 CDN
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
 }
 
 

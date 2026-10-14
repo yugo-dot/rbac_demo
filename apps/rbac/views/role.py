@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -24,6 +25,21 @@ class RoleViewSet(ModelViewSet):
     search_fields = ['name', 'code', 'description']
     ordering_fields = ['id', 'code', 'name', 'created_at']
 
+    @extend_schema(
+        methods=['GET'],
+        summary='列出某角色的权限',
+        responses={200: RolePermissionSerializer(many=True)},
+    )
+    @extend_schema(
+        methods=['POST'],
+        summary='给角色分配权限',
+        request=RolePermissionInputSerializer,
+        responses={
+            201: RolePermissionSerializer,
+            200: OpenApiResponse(description='已存在, 幂等返回'),
+            404: OpenApiResponse(description='角色或权限不存在'),
+        },
+    )
     @action(detail=True, methods=['get', 'post'], url_path='permissions')
     def permissions(self, request, pk=None):
         """GET  列出某角色的权限.
@@ -52,6 +68,17 @@ class RoleViewSet(ModelViewSet):
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        summary='移除角色的某个权限',
+        parameters=[
+            OpenApiParameter('pk', int, OpenApiParameter.PATH, description='角色 id'),
+            OpenApiParameter('permission_id', int, OpenApiParameter.PATH, description='权限 id'),
+        ],
+        responses={
+            204: OpenApiResponse(description='删除成功'),
+            404: OpenApiResponse(description='关联不存在'),
+        },
+    )
     @action(
         detail=True,
         methods=['delete'],

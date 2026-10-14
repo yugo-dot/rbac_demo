@@ -19,7 +19,7 @@
 ## 一、项目背景
 
 - 目标: 学习并实战 Django + DRF 的 RBAC (基于角色的访问控制)
-- 技术栈: Django 5.1.4 / DRF 3.15 / SimpleJWT 5.3 / django-filter 24.3 / MySQL 8.0 / Redis 7 / Docker
+- 技术栈: Django 5.1.4 / DRF 3.15 / SimpleJWT 5.3 / django-filter 24.3 / drf-spectacular 0.28 / MySQL 8.0 / Redis 7 / Docker
 - 权限模型: RBAC (用户-角色-权限), 后期考虑引入 ABAC 做数据级权限
 
 ## 二、环境信息
@@ -35,6 +35,7 @@
 - 数据库: rbac_demo (用户 rbac_user / rbac_pass_123)
 - Redis 连接: host=redis, port=6379
 - 对外入口: shared-nginx 反代 http://rbac.localhost -> rbac_demo_web:8000
+- Swagger UI: http://rbac.localhost/api/docs/  (schema 在 /api/schema/)
   - hosts 需加: 127.0.0.1 rbac.localhost
   - nginx 配置: /home/gaoyu/docker-infra/nginx/conf.d/rbac.conf (不在本项目仓库里)
 
@@ -138,6 +139,7 @@ rbac_demo/
 - [x] 分页 + django-filter + 搜索 + 排序 (Role / Permission 列表)
 - [x] settings 拆分 base/dev/prod (通过 DJANGO_SETTINGS_MODULE 选择)
 - [x] 接 shared-nginx 对外暴露 (子域名 rbac.localhost, 反代到 rbac_demo_web:8000)
+- [x] API 文档 (drf-spectacular): /api/schema/ + /api/docs/ (Swagger UI, 静态文件走 sidecar 不走 CDN)
 
 ## 六、Git 提交记录
 
@@ -160,6 +162,7 @@ rbac_demo/
 - 19cfa00 feat: Redis 缓存 get_permission_codes (主动失效 + TTL 兜底)
 - a97881a feat: 分页 + django-filter + 搜索 + 排序 (Role / Permission 列表)
 - 41fec44 refactor: settings 拆分 base/dev/prod + 测试缓存隔离
+- 8d2f52e docs: PROGRESS.md 记录 shared-nginx 对接
 
 ## 七、下一步
 
@@ -240,6 +243,14 @@ cat config/settings/prod.py
 cat apps/articles/tests.py
 cat apps/users/tests.py
 
+# git 状态
+git log --oneline -10
+git status
+
+# 依赖与容器
+cat requirements.txt
+cat docker-compose.yml
+
 ## 十一、设计决策记录
 
 - User 继承 AbstractUser: 省事, admin 兼容, 不折腾 AbstractBaseUser
@@ -278,6 +289,11 @@ cat apps/users/tests.py
   docker-compose.yml 里通过环境变量指定, 生产改为 config.settings.prod
 - 测试环境缓存隔离: base.py 里检测 sys.argv 里有没有 'test',
   有则用 LocMemCache, 否则用 Redis; 避免测试数据写脏生产 Redis
+- API 文档: 用 drf-spectacular (OpenAPI 3), 不用 drf-yasg (只支持 Swagger 2 且不维护)
+  - 静态文件走 drf-spectacular-sidecar 本地提供, 不走 CDN (国内网络 cdn.jsdelivr.net 会被重置)
+  - SPECTACULAR_SETTINGS: SERVE_PERMISSIONS = AllowAny (文档页面匿名可访问, 接口本身该保护还是保护)
+  - 非 ModelViewSet 的视图 (LoginView / ArticleDemoView / 自定义 action) 用 @extend_schema 补注解,
+    否则 Swagger 里看不到请求体/响应结构
 - 对外暴露方案: 走子域名 rbac.localhost (而非子路径)
   - 优点: Django 侧零改动, 不用处理路径前缀
   - nginx 里单独加一个 server_name rbac.localhost 的 server, default.conf 保持不动

@@ -20,6 +20,6 @@ class MeSerializer(serializers.ModelSerializer):
             'permissions',
         ]
 
-    def get_permissions(self, obj):
+    def get_permissions(self, obj) -> list:
         # 排序, 保证返回稳定
         return sorted(obj.get_permission_codes())
