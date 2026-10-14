@@ -25,3 +25,17 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    def get_permission_codes(self) -> set:
+        """获取该用户拥有的所有权限编码集合.
+
+        查询路径: User -> UserRole -> Role -> RolePermission -> Permission
+        返回形如 {'article:create', 'user:delete'} 的集合.
+        """
+        # 延迟导入, 避免 users 与 rbac 之间潜在的循环导入
+        from rbac.models import Permission
+
+        codes = Permission.objects.filter(
+            rolepermission__role__userrole__user=self
+        ).values_list('code', flat=True).distinct()
+        return set(codes)
