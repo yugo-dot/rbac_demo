@@ -19,6 +19,11 @@ class RoleViewSet(ModelViewSet):
     queryset = Role.objects.all().order_by('-id')
     serializer_class = RoleSerializer
 
+    # 过滤 / 搜索 / 排序
+    filterset_fields = ['code', 'name']
+    search_fields = ['name', 'code', 'description']
+    ordering_fields = ['id', 'code', 'name', 'created_at']
+
     @action(detail=True, methods=['get', 'post'], url_path='permissions')
     def permissions(self, request, pk=None):
         """GET  列出某角色的权限.

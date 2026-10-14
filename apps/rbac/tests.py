@@ -105,3 +105,61 @@ class RolePermissionAssignmentTests(APITestCase):
         url = f'/api/rbac/users/{self.bob.id}/roles/'
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PermissionListFeatureTests(APITestCase):
+    """验证 Permission 列表的分页 / 过滤 / 搜索 / 排序."""
+
+    url = '/api/rbac/permissions/'
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.alice = User.objects.create_user(
+            username='alice', password='alice12345', email='alice@example.com'
+        )
+        # 建 25 条权限, 其中 3 条含 "文章"
+        for i in range(1, 23):
+            Permission.objects.create(name=f'演示 {i}', code=f'demo:{i:02d}')
+        Permission.objects.create(name='读文章', code='article:read')
+        Permission.objects.create(name='写文章', code='article:write')
+        Permission.objects.create(name='删文章', code='article:delete')
+
+    def setUp(self):
+        token = self.client.post(
+            '/api/users/login/',
+            {'username': 'alice', 'password': 'alice12345'},
+            format='json',
+        ).data['access']
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_pagination_default_page_size(self):
+        """默认每页 20 条."""
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['count'], 25)
+        self.assertEqual(len(resp.data['results']), 20)
+
+    def test_pagination_second_page(self):
+        """第 2 页剩 5 条."""
+        resp = self.client.get(self.url, {'page': 2})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['results']), 5)
+
+    def test_filter_by_code(self):
+        """精确过滤 code=article:read."""
+        resp = self.client.get(self.url, {'code': 'article:read'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['count'], 1)
+        self.assertEqual(resp.data['results'][0]['code'], 'article:read')
+
+    def test_search(self):
+        """搜索 name 含 '文章'."""
+        resp = self.client.get(self.url, {'search': '文章'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['count'], 3)
+
+    def test_ordering(self):
+        """按 code 倒序, 第一条应是 demo:22."""
+        resp = self.client.get(self.url, {'ordering': '-code'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['results'][0]['code'], 'demo:22')

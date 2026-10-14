@@ -19,7 +19,7 @@
 ## 一、项目背景
 
 - 目标: 学习并实战 Django + DRF 的 RBAC (基于角色的访问控制)
-- 技术栈: Django 5.1.4 / DRF 3.15 / SimpleJWT 5.3 / MySQL 8.0 / Redis 7 / Docker
+- 技术栈: Django 5.1.4 / DRF 3.15 / SimpleJWT 5.3 / django-filter 24.3 / MySQL 8.0 / Redis 7 / Docker
 - 权限模型: RBAC (用户-角色-权限), 后期考虑引入 ABAC 做数据级权限
 
 ## 二、环境信息
@@ -128,6 +128,7 @@ rbac_demo/
 - [x] 当前用户信息接口 GET /api/users/me/ (返回资料 + 权限编码)
 - [x] 用户-角色 / 角色-权限 分配接口 (GET / POST / DELETE)
 - [x] Redis 缓存 get_permission_codes (key user:perms:{uid}, TTL 300s, 变动时主动清)
+- [x] 分页 + django-filter + 搜索 + 排序 (Role / Permission 列表)
 
 ## 六、Git 提交记录
 
@@ -147,6 +148,7 @@ rbac_demo/
 - 9a990f4 feat: 拆分 UserProfile, 展示类字段从 User 移出
 - e090926 feat: 当前用户信息接口 GET /api/users/me/
 - cfc58b5 feat: 用户-角色 / 角色-权限 分配接口 (ViewSet @action)
+- 19cfa00 feat: Redis 缓存 get_permission_codes (主动失效 + TTL 兜底)
 
 ## 七、下一步
 
@@ -155,7 +157,7 @@ rbac_demo/
 1. [x] 用户 - 角色 / 角色 - 权限 分配接口 (补齐管理面)
 2. [x] 当前用户信息接口 GET /api/users/me/ (返回资料 + 权限编码)
 3. [x] Redis 缓存 get_permission_codes()
-4. [ ] 接 django-filter + 分页, 完善列表接口
+4. [x] 接 django-filter + 分页, 完善列表接口
 5. [ ] 接 shared-nginx 对外暴露
 6. [ ] settings 拆 base/dev/prod
 
@@ -254,6 +256,10 @@ cat apps/users/tests.py
   - 失效: 分配 / 移除用户角色, 或给角色增删权限时, 主动清相关用户缓存
   - 工具函数: apps/rbac/cache.py 的 invalidate_user_perms / invalidate_role_perms
   - Redis 挂了不影响业务: CACHES['default']['OPTIONS']['IGNORE_EXCEPTIONS'] = True
+- 列表接口统一: 分页 (PageNumberPagination, PAGE_SIZE=20) + DjangoFilterBackend + SearchFilter + OrderingFilter
+  - RoleViewSet: filterset_fields=['code','name'], search_fields=['name','code','description'], ordering_fields=['id','code','name','created_at']
+  - PermissionViewSet: 同上
+  - 子列表 (users/{id}/roles/, roles/{id}/permissions/) 不分页
 
 ## 十二、协作方式约定
 
