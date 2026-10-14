@@ -84,6 +84,8 @@ rbac_demo/
 - b7dfbf9 feat: 切换数据库为 MySQL 并应用初始迁移
 - 7d576c9 feat: 自定义 User 模型 + RBAC 四张表 (models 拆成包)
 - e4e6a86 feat: User 增加 get_permission_codes 方法
+- da4a899 docs: PROGRESS.md 补充 commit 记录
+- dec6c94 feat: JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
 
 ## 七、下一步
 
