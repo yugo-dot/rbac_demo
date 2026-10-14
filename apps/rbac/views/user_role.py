@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from rbac.cache import invalidate_user_perms
 from rbac.models import Role, UserRole
 from rbac.serializers import (
     UserRoleInputSerializer,
@@ -40,6 +41,8 @@ class UserRoleViewSet(ViewSet):
         role = get_object_or_404(Role, pk=input_ser.validated_data['role_id'])
 
         obj, created = UserRole.objects.get_or_create(user=user, role=role)
+        # 清该用户的权限缓存
+        invalidate_user_perms(user.id)
         return Response(
             UserRoleSerializer(obj).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -51,4 +54,6 @@ class UserRoleViewSet(ViewSet):
         user = get_object_or_404(User, pk=pk)
         obj = get_object_or_404(UserRole, user=user, role_id=role_id)
         obj.delete()
+        # 清该用户的权限缓存
+        invalidate_user_perms(user.id)
         return Response(status=status.HTTP_204_NO_CONTENT)

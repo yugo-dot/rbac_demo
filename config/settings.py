@@ -112,6 +112,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # 自定义用户模型
 AUTH_USER_MODEL = 'users.User'
 
+
+# 缓存 (Redis)
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://redis:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'IGNORE_EXCEPTIONS': True,
+        },
+    }
+}
+
+
 # DRF 配置
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+from rbac.cache import invalidate_role_perms
 from rbac.models import Permission, Role, RolePermission
 from rbac.serializers import (
     RolePermissionInputSerializer,
@@ -39,6 +40,8 @@ class RoleViewSet(ModelViewSet):
         obj, created = RolePermission.objects.get_or_create(
             role=role, permission=permission
         )
+        # 清该角色下所有用户的权限缓存
+        invalidate_role_perms(role.id)
         return Response(
             RolePermissionSerializer(obj).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -56,4 +59,6 @@ class RoleViewSet(ModelViewSet):
             RolePermission, role=role, permission_id=permission_id
         )
         obj.delete()
+        # 清该角色下所有用户的权限缓存
+        invalidate_role_perms(role.id)
         return Response(status=status.HTTP_204_NO_CONTENT)

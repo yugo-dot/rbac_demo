@@ -78,6 +78,7 @@ rbac_demo/
 │   │   │   ├── permission.py
 │   │   │   └── user_role.py     (用户角色分配 action)
 │   │   ├── permissions.py       (HasPerm 权限类)
+│   │   ├── cache.py             (用户权限缓存失效工具)
 │   │   ├── urls.py              (DefaultRouter 注册)
 │   │   ├── admin.py
 │   │   ├── apps.py
@@ -126,6 +127,7 @@ rbac_demo/
 - [x] 示例接口 + RBAC 保护验证 (app: articles, 手动 curl + 单元测试)
 - [x] 当前用户信息接口 GET /api/users/me/ (返回资料 + 权限编码)
 - [x] 用户-角色 / 角色-权限 分配接口 (GET / POST / DELETE)
+- [x] Redis 缓存 get_permission_codes (key user:perms:{uid}, TTL 300s, 变动时主动清)
 
 ## 六、Git 提交记录
 
@@ -144,6 +146,7 @@ rbac_demo/
 - b3f41a3 docs: 重写 PROGRESS.md, 与实际代码对齐
 - 9a990f4 feat: 拆分 UserProfile, 展示类字段从 User 移出
 - e090926 feat: 当前用户信息接口 GET /api/users/me/
+- cfc58b5 feat: 用户-角色 / 角色-权限 分配接口 (ViewSet @action)
 
 ## 七、下一步
 
@@ -151,7 +154,7 @@ rbac_demo/
 
 1. [x] 用户 - 角色 / 角色 - 权限 分配接口 (补齐管理面)
 2. [x] 当前用户信息接口 GET /api/users/me/ (返回资料 + 权限编码)
-3. [ ] Redis 缓存 get_permission_codes()
+3. [x] Redis 缓存 get_permission_codes()
 4. [ ] 接 django-filter + 分页, 完善列表接口
 5. [ ] 接 shared-nginx 对外暴露
 6. [ ] settings 拆 base/dev/prod
@@ -166,7 +169,7 @@ docker compose exec web bash
 docker compose exec web python manage.py makemigrations
 docker compose exec web python manage.py migrate
 docker compose exec web python manage.py shell -c "xxx"
-docker compose exec web python manage.py test articles -v 2
+docker compose exec web python manage.py test users rbac articles -v 2
 docker compose logs web --tail 50
 docker compose restart web
 git add . && git commit -m "xxx"
@@ -205,8 +208,9 @@ cat apps/rbac/views/permission.py
 cat apps/rbac/views/user_role.py
 cat apps/articles/views.py
 
-# 权限类
+# 权限类与缓存工具
 cat apps/rbac/permissions.py
+cat apps/rbac/cache.py
 
 # 路由
 cat config/urls.py
@@ -246,6 +250,10 @@ cat apps/users/tests.py
   - RoleViewSet 加 permissions / remove_permission
   - 写入用 get_or_create 保证幂等 (201 新建 / 200 已存在)
 - 现阶段这些接口只要求 IsAuthenticated, 未叠加 HasPerm (等权限数据稳定后再加)
+- 用户权限缓存: key = user:perms:{uid}, value = 权限码列表, TTL = 300s
+  - 失效: 分配 / 移除用户角色, 或给角色增删权限时, 主动清相关用户缓存
+  - 工具函数: apps/rbac/cache.py 的 invalidate_user_perms / invalidate_role_perms
+  - Redis 挂了不影响业务: CACHES['default']['OPTIONS']['IGNORE_EXCEPTIONS'] = True
 
 ## 十二、协作方式约定
 

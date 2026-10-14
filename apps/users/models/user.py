@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.cache import cache
 from django.db import models
 
 
@@ -27,15 +28,26 @@ class User(AbstractUser):
         return self.username
 
     def get_permission_codes(self) -> set:
-        """获取该用户拥有的所有权限编码集合.
+        """获取该用户拥有的所有权限编码集合 (带 Redis 缓存).
 
         查询路径: User -> UserRole -> Role -> RolePermission -> Permission
-        返回形如 {'article:create', 'user:delete'} 的集合.
+        缓存 key: user:perms:{user_id}, TTL 300 秒.
+        缓存失效: 分配 / 移除角色或权限时主动清, TTL 兜底.
         """
         # 延迟导入, 避免 users 与 rbac 之间潜在的循环导入
+        from rbac.cache import PERM_CACHE_TTL, perm_cache_key
         from rbac.models import Permission
 
-        codes = Permission.objects.filter(
-            rolepermission__role__userrole__user=self
-        ).values_list('code', flat=True).distinct()
+        key = perm_cache_key(self.id)
+        cached = cache.get(key)
+        if cached is not None:
+            return set(cached)
+
+        codes = list(
+            Permission.objects
+            .filter(rolepermission__role__userrole__user=self)
+            .values_list('code', flat=True)
+            .distinct()
+        )
+        cache.set(key, codes, PERM_CACHE_TTL)
         return set(codes)
