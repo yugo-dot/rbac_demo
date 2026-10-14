@@ -35,6 +35,8 @@
 - [x] ABAC 基础设施: Casbin + casbin_rule 表 + enforcer 封装 (apps/rbac/abac.py)
 - [x] Article 真实 CRUD + 两层权限 (HasPerm 接口级 + HasAbacPerm 对象级)
 - [x] Casbin 策略管理接口 (/api/rbac/policies/) + 5 条默认策略种子
+- [x] 推送到 Gitee (含 7 个 tag, v0.1.0 ~ v0.7.0)
+- [x] 修复测试跨类缓存污染 (LocMemCache -> DummyCache) + 0005 迁移改用 schema_editor 兼容 SQLite
 
 ## 二、下一步
 
@@ -48,4 +50,11 @@
 ## 三、当前卡点
 
 - 无
+
+## 四、已知问题 / 搁置项
+
+- **CI 未落地**: Gitee Go 账号无免费构建额度, 尝试失败.
+  - 已验证: 项目在 SQLite 下测试全过 (53/53), `ci.yml` 已就绪过 (后被移除)
+  - 换 GitHub Actions 或其他平台时可复用: 用 SQLite + `requirements-ci.txt` (不含 mysqlclient)
+  - 当前靠本地 `pre-commit` + 手动 `manage.py test` 保证质量
 

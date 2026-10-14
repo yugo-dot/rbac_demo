@@ -257,8 +257,6 @@ cat docker-compose.yml
 - settings 拆分: base / dev / prod, 通过环境变量 DJANGO_SETTINGS_MODULE 选择;
   manage.py / wsgi.py / asgi.py 默认指向 config.settings.dev;
   docker-compose.yml 里通过环境变量指定, 生产改为 config.settings.prod
-- 测试环境缓存隔离: base.py 里检测 sys.argv 里有没有 'test',
-  有则用 LocMemCache, 否则用 Redis; 避免测试数据写脏生产 Redis
 - API 文档: 用 drf-spectacular (OpenAPI 3), 不用 drf-yasg (只支持 Swagger 2 且不维护)
   - 静态文件走 drf-spectacular-sidecar 本地提供, 不走 CDN (国内网络 cdn.jsdelivr.net 会被重置)
   - SPECTACULAR_SETTINGS: SERVE_PERMISSIONS = AllowAny (文档页面匿名可访问, 接口本身该保护还是保护)
@@ -305,7 +303,7 @@ cat docker-compose.yml
 - ABAC 数据级权限 (Casbin):
   - 用 casbin (pycasbin) + 自定义 Adapter, 策略存 MySQL 的 casbin_rule 表
   - 不用 casbin_adapter 的 AppConfig.ready (它在 app 初始化时访问 DB, 会引发警告和迁移问题)
-  - casbin_rule 建表迁移在 rbac/0005, 不用 CreateModel 而是 RunPython + 原生 SQL + atomic=False
+  - casbin_rule 建表迁移在 rbac/0005 (细节见下方"数据库可移植性")
   - 模型定义在项目根 casbin_model.conf, ABAC 模式: (sub, obj, act) + eval(sub_rule)
   - sub / obj 都是 dict, 策略表达式用 r.sub.xxx / r.obj.xxx 引用属性
   - enforcer 用 lru_cache 缓存, 策略变更后 clear_enforcer_cache()
@@ -316,6 +314,16 @@ cat docker-compose.yml
   - 策略种子在 rbac/0007 (5 条: 作者全权 / 已发布公开 / 主编可读)
   - 已知取舍: get_queryset 里逐行调 enforce 是 N 次判定, 量大时会慢;
     主流优化是先用 Q 对象在 DB 层粗过滤, 只对候选行跑 Casbin
+- 测试环境缓存隔离 (关键修复):
+  - 测试环境用 DummyCache (不缓存), 不是 LocMemCache
+  - 原因: LocMemCache 是进程级, 跨 TestCase 类不隔离; 用户 ID 在测试间会重复,
+    导致 get_permission_codes() 读到上个测试类的脏缓存
+  - 现象: 单跑测试类全过, 全量跑时后面的类全 403
+- 数据库可移植性:
+  - `0005_add_casbin_rule` 用 `schema_editor.create_model()` 建表, 不用原生 SQL
+  - 原因: `BIGINT AUTO_INCREMENT` 是 MySQL 方言, SQLite 不认
+  - `atomic = False` (MySQL DDL 不能在事务里跑)
+  - `config.settings.base` 支持 `USE_SQLITE=true` 切 SQLite (CI 用)
 - 代码门禁: ruff + pre-commit
   - ruff 负责 lint (E/F/I/UP/B/SIM) + format, 配置在 pyproject.toml
   - 忽略规则: RUF012 (Django/DRF 类属性惯例), RUF022 (__all__ 顺序), SIM102, E501
@@ -324,7 +332,7 @@ cat docker-compose.yml
   - 选双引号 (ruff-format 默认, 与 black 一致)
   - 首次全量格式化后, 会统一改掉单引号 -> 双引号 (一次性 commit)
   - pre-commit 装在跑 git 的机器 (WSL), 不是容器; 因为 git commit 在 WSL 执行
-  - CI 暂不做, 等推 Gitee 时再加 Gitee Go 配置
+  - CI 未落地: Gitee Go 账号无免费额度 (详见 PROGRESS.md 的'已知问题')
 
 ## 八、协作方式约定
 
