@@ -59,6 +59,7 @@ rbac_demo/
 │       │   ├── permission.py
 │       │   ├── user_role.py
 │       │   └── role_permission.py
+│       ├── permissions.py       (HasPerm)
 │       └── migrations/
 ├── config/
 │   └── settings.py
@@ -85,6 +86,7 @@ rbac_demo/
 - [x] User.get_permission_codes() 方法
 - [x] JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
 - [x] 角色 / 权限的 CRUD 接口 (ModelViewSet + DefaultRouter)
+- [x] 自定义权限类 HasPerm (支持 list / dict, 超管放行)
 
 ## 六、Git 提交记录
 
@@ -102,7 +104,7 @@ rbac_demo/
 1. [x] 给 User 加方法: get_permission_codes()
 2. [x] 写 JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
 3. [x] 写角色 / 权限的 CRUD 接口
-4. [ ] 写自定义权限类 HasPerm
+4. [x] 写自定义权限类 HasPerm
 5. [ ] 用 RBAC 保护示例接口, 写测试验证
 
 ## 八、当前卡点
