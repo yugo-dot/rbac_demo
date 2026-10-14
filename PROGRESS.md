@@ -82,6 +82,7 @@ rbac_demo/
 - 858c64b chore: 初始化 Django 项目骨架与 Docker 环境
 - b7dfbf9 feat: 切换数据库为 MySQL 并应用初始迁移
 - 7d576c9 feat: 自定义 User 模型 + RBAC 四张表 (models 拆成包)
+- e4e6a86 feat: User 增加 get_permission_codes 方法
 
 ## 七、下一步
 
