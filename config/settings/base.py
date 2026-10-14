@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # 第三方
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "drf_spectacular",
     "drf_spectacular_sidecar",
@@ -176,4 +177,7 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
+    # blacklist: 登出 / 改密后让旧 refresh 失效
+    "ROTATE_REFRESH_TOKENS": True,  # 刷新时换发新 refresh
+    "BLACKLIST_AFTER_ROTATION": True,  # 旧的 refresh 拉黑
 }

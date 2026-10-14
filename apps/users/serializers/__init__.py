@@ -1,4 +1,9 @@
-from .auth import LoginSerializer
+from .auth import ChangePasswordSerializer, LoginSerializer, RegisterSerializer
 from .user import MeSerializer
 
-__all__ = ["LoginSerializer", "MeSerializer"]
+__all__ = [
+    "ChangePasswordSerializer",
+    "LoginSerializer",
+    "MeSerializer",
+    "RegisterSerializer",
+]

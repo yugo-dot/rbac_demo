@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -54,3 +55,89 @@ class LoginSerializer(serializers.Serializer):
                 "email": instance.email,
             },
         }
+
+
+class RegisterSerializer(serializers.Serializer):
+    """注册序列化器, 成功后直接返回 token (注册即登录)."""
+
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(write_only=True)
+    password2 = serializers.CharField(write_only=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    phone = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("用户名已存在")
+        return value
+
+    def validate_email(self, value):
+        # 空串按 None 处理, 避免踩 unique 冲突
+        if not value:
+            return None
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("邮箱已被注册")
+        return value
+
+    def validate_phone(self, value):
+        if not value:
+            return None
+        if User.objects.filter(phone=value).exists():
+            raise serializers.ValidationError("手机号已被注册")
+        return value
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password2"]:
+            raise serializers.ValidationError("两次输入的密码不一致")
+        # 走 Django 内置密码强度校验
+        validate_password(attrs["password"])
+        return attrs
+
+    def create(self, validated_data):
+        validated_data.pop("password2")
+        password = validated_data.pop("password")
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def to_representation(self, instance):
+        refresh = RefreshToken.for_user(instance)
+        profile = getattr(instance, "profile", None)
+        return {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": instance.id,
+                "username": instance.username,
+                "nickname": profile.nickname if profile else "",
+                "phone": instance.phone,
+                "email": instance.email,
+            },
+        }
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """改密序列化器, 成功后调用方负责拉黑用户所有 refresh token."""
+
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+    new_password2 = serializers.CharField(write_only=True)
+
+    def validate_old_password(self, value):
+        user = self.context["request"].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("旧密码不正确")
+        return value
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password2"]:
+            raise serializers.ValidationError("两次输入的新密码不一致")
+        validate_password(attrs["new_password"], self.context["request"].user)
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
+        user.save()
+        return user
