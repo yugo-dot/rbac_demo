@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from rbac.models import Permission, Role, RolePermission, UserRole
+from rbac.models import AuditLog, Permission, Role, RolePermission, UserRole
 
 User = get_user_model()
 
@@ -387,3 +387,176 @@ class PolicyManagementTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
         resp = self.client.delete(f"{self.url}99999/")
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class AuditLogTests(APITestCase):
+    """验证审计日志的写入和查询."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.alice = User.objects.create_user(
+            username="alice",
+            password="alice12345",
+            email="alice_audit@example.com",
+        )
+        # alice 拿到 RBAC 管理 + 审计查看的全部权限
+        role_admin = Role.objects.create(name="审计管理员", code="audit_admin")
+        for code in [
+            "rbac:role:read",
+            "rbac:role:manage",
+            "rbac:permission:read",
+            "rbac:permission:manage",
+            "rbac:user_role:read",
+            "rbac:user_role:manage",
+            "rbac:audit_log:read",
+        ]:
+            perm = Permission.objects.get(code=code)
+            RolePermission.objects.create(role=role_admin, permission=perm)
+        UserRole.objects.create(user=cls.alice, role=role_admin)
+
+    def setUp(self):
+        resp = self.client.post(
+            "/api/users/login/",
+            {"username": "alice", "password": "alice12345"},
+            format="json",
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
+        # 每个测试前清空审计日志, 避免串扰
+        AuditLog.objects.all().delete()
+
+    def _logs(self, **filters):
+        return AuditLog.objects.filter(**filters)
+
+    # --- 记录写入 ---
+
+    def test_create_role_logs(self):
+        """创建角色 -> 一条 create 日志."""
+        resp = self.client.post(
+            "/api/rbac/roles/",
+            {"name": "测试角色", "code": "test_role"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        logs = self._logs(action="create", target_type="role")
+        self.assertEqual(logs.count(), 1)
+        log = logs.first()
+        self.assertEqual(log.operator, self.alice)
+        self.assertEqual(log.target_id, resp.data["id"])
+        self.assertIn("test_role", log.target_repr)
+
+    def test_update_role_logs_with_before_after(self):
+        """更新角色 -> 一条 update 日志, 含 before / after."""
+        role = Role.objects.create(name="旧名字", code="update_role")
+        resp = self.client.patch(
+            f"/api/rbac/roles/{role.id}/",
+            {"name": "新名字"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        log = self._logs(action="update", target_type="role").first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.detail["before"]["name"], "旧名字")
+        self.assertEqual(log.detail["after"]["name"], "新名字")
+
+    def test_delete_role_logs(self):
+        """删除角色 -> 一条 delete 日志."""
+        role = Role.objects.create(name="待删", code="del_role")
+        resp = self.client.delete(f"/api/rbac/roles/{role.id}/")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        logs = self._logs(action="delete", target_type="role")
+        self.assertEqual(logs.count(), 1)
+        self.assertEqual(logs.first().target_id, role.id)
+
+    def test_assign_user_role_logs(self):
+        """分配用户角色 -> 一条 assign 日志."""
+        target_user = User.objects.create_user(
+            username="bob", password="bob12345", email="bob_audit@example.com"
+        )
+        role = Role.objects.create(name="编辑器", code="editor_log")
+        resp = self.client.post(
+            f"/api/rbac/users/{target_user.id}/roles/",
+            {"role_id": role.id},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        log = self._logs(action="assign", target_type="user_role").first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.target_id, target_user.id)
+        self.assertEqual(log.detail["role"], "editor_log")
+
+    def test_remove_user_role_logs(self):
+        """移除用户角色 -> 一条 remove 日志."""
+        target_user = User.objects.create_user(
+            username="carol", password="carol12345", email="carol_audit@example.com"
+        )
+        role = Role.objects.create(name="临时的", code="tmp_role")
+        UserRole.objects.create(user=target_user, role=role)
+        resp = self.client.delete(f"/api/rbac/users/{target_user.id}/roles/{role.id}/")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        log = self._logs(action="remove", target_type="user_role").first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.detail["role"], "tmp_role")
+
+    def test_assign_same_role_twice_logs_once(self):
+        """重复分配同一角色 (幂等) -> 只记一次 assign."""
+        target_user = User.objects.create_user(
+            username="dan", password="dan12345", email="dan_audit@example.com"
+        )
+        role = Role.objects.create(name="幂等", code="idem_role")
+        self.client.post(
+            f"/api/rbac/users/{target_user.id}/roles/",
+            {"role_id": role.id},
+            format="json",
+        )
+        self.client.post(
+            f"/api/rbac/users/{target_user.id}/roles/",
+            {"role_id": role.id},
+            format="json",
+        )
+        logs = self._logs(action="assign", target_type="user_role")
+        self.assertEqual(logs.count(), 1)
+
+    # --- 查询接口 ---
+
+    def test_list_audit_logs(self):
+        """有权限的用户能查审计日志列表."""
+        self.client.post(
+            "/api/rbac/roles/",
+            {"name": "查日志测试", "code": "read_logs_role"},
+            format="json",
+        )
+        resp = self.client.get("/api/rbac/audit-logs/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(resp.data["count"], 1)
+
+    def test_unauthenticated_cannot_list_logs(self):
+        """未登录 -> 401."""
+        self.client.credentials()
+        resp = self.client.get("/api/rbac/audit-logs/")
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_user_without_perm_cannot_list_logs(self):
+        """无 rbac:audit_log:read 权限 -> 403."""
+        User.objects.create_user(
+            username="nobody", password="no123456", email="nobody_audit@example.com"
+        )
+        resp = self.client.post(
+            "/api/users/login/",
+            {"username": "nobody", "password": "no123456"},
+            format="json",
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
+        resp = self.client.get("/api/rbac/audit-logs/")
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_filter_by_action(self):
+        """按 action 过滤."""
+        self.client.post(
+            "/api/rbac/roles/",
+            {"name": "过滤测试", "code": "filter_role"},
+            format="json",
+        )
+        resp = self.client.get("/api/rbac/audit-logs/", {"action": "create"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for item in resp.data["results"]:
+            self.assertEqual(item["action"], "create")

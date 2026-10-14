@@ -1,3 +1,4 @@
+from .audit_log import AuditLogSerializer
 from .permission import PermissionSerializer
 from .policy import PolicySerializer
 from .role import RoleSerializer
@@ -5,6 +6,7 @@ from .role_permission import RolePermissionInputSerializer, RolePermissionSerial
 from .user_role import UserRoleInputSerializer, UserRoleSerializer
 
 __all__ = [
+    "AuditLogSerializer",
     "PermissionSerializer",
     "PolicySerializer",
     "RolePermissionInputSerializer",

@@ -199,3 +199,7 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,  # 刷新时换发新 refresh
     "BLACKLIST_AFTER_ROTATION": True,  # 旧的 refresh 拉黑
 }
+
+
+# 审计日志: True 时也记录 read 操作 (默认只记写)
+AUDIT_LOG_READ_OPERATIONS = False

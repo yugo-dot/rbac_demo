@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from rbac.abac import add_policy, list_policies_with_id, remove_policy_by_id
+from rbac.audit import log_action
+from rbac.models import AuditLog
 from rbac.permissions import HasPerm
 from rbac.serializers import PolicySerializer
 
@@ -56,6 +58,20 @@ class PolicyViewSet(ViewSet):
             ),
             None,
         )
+        # 审计: 只在新加时记
+        if created:
+            log_action(
+                request,
+                AuditLog.ACTION_CREATE,
+                "policy",
+                target_id=obj["id"] if obj else None,
+                target_repr=f"策略 {data['sub_rule']}",
+                detail={
+                    "sub_rule": data["sub_rule"],
+                    "obj": data["obj"],
+                    "act": data["act"],
+                },
+            )
         return Response(
             PolicySerializer(obj).data if obj else serializer.data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -69,7 +85,22 @@ class PolicyViewSet(ViewSet):
         },
     )
     def destroy(self, request, pk=None):
-        deleted = remove_policy_by_id(int(pk))
+        policy_id = int(pk)
+        # 删除前先拿到策略内容 (用于审计)
+        policies = list_policies_with_id()
+        policy = next((p for p in policies if p["id"] == policy_id), None)
+
+        deleted = remove_policy_by_id(policy_id)
         if not deleted:
             return Response({"detail": "策略不存在"}, status=status.HTTP_404_NOT_FOUND)
+
+        # 审计
+        log_action(
+            request,
+            AuditLog.ACTION_DELETE,
+            "policy",
+            target_id=policy_id,
+            target_repr=f"策略 {policy['sub_rule']}" if policy else f"策略 #{policy_id}",
+            detail=policy,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

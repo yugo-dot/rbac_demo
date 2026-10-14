@@ -6,8 +6,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from rbac.audit import log_action
 from rbac.cache import invalidate_user_perms
-from rbac.models import Role, UserRole
+from rbac.models import AuditLog, Role, UserRole
 from rbac.permissions import HasPerm
 from rbac.serializers import (
     UserRoleInputSerializer,
@@ -72,6 +73,16 @@ class UserRoleViewSet(ViewSet):
         obj, created = UserRole.objects.get_or_create(user=user, role=role)
         # 清该用户的权限缓存
         invalidate_user_perms(user.id)
+        # 审计: 只在新分配时记
+        if created:
+            log_action(
+                request,
+                AuditLog.ACTION_ASSIGN,
+                "user_role",
+                target_id=user.id,
+                target_repr=f"用户 {user.username}",
+                detail={"role": role.code},
+            )
         return Response(
             UserRoleSerializer(obj).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -93,7 +104,17 @@ class UserRoleViewSet(ViewSet):
         """DELETE /api/rbac/users/{pk}/roles/{role_id}/ 移除某用户的某角色."""
         user = get_object_or_404(User, pk=pk)
         obj = get_object_or_404(UserRole, user=user, role_id=role_id)
+        role_code = obj.role.code
         obj.delete()
         # 清该用户的权限缓存
         invalidate_user_perms(user.id)
+        # 审计
+        log_action(
+            request,
+            AuditLog.ACTION_REMOVE,
+            "user_role",
+            target_id=user.id,
+            target_repr=f"用户 {user.username}",
+            detail={"role": role_code},
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

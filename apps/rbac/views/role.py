@@ -6,8 +6,9 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+from rbac.audit import log_action
 from rbac.cache import invalidate_role_perms
-from rbac.models import Permission, Role, RolePermission
+from rbac.models import AuditLog, Permission, Role, RolePermission
 from rbac.permissions import HasPerm
 from rbac.serializers import (
     RolePermissionInputSerializer,
@@ -36,19 +37,51 @@ class RoleViewSet(ModelViewSet):
     search_fields = ["name", "code", "description"]
     ordering_fields = ["id", "code", "name", "created_at"]
 
+    def perform_create(self, serializer):
+        """创建角色 + 审计."""
+        instance = serializer.save()
+        log_action(
+            self.request,
+            AuditLog.ACTION_CREATE,
+            "role",
+            target_id=instance.id,
+            target_repr=f"角色 {instance.code}",
+            detail={"name": instance.name, "code": instance.code},
+        )
+
     def perform_update(self, serializer):
-        """内置角色: 禁止修改 code."""
+        """内置角色: 禁止修改 code. 成功则记审计."""
         instance = serializer.instance
         if instance.is_builtin and "code" in serializer.validated_data:
             if serializer.validated_data["code"] != instance.code:
                 raise PermissionDenied("内置角色的 code 不可修改")
-        serializer.save()
+
+        before = {"name": instance.name, "code": instance.code, "description": instance.description}
+        updated = serializer.save()
+        after = {"name": updated.name, "code": updated.code, "description": updated.description}
+        log_action(
+            self.request,
+            AuditLog.ACTION_UPDATE,
+            "role",
+            target_id=updated.id,
+            target_repr=f"角色 {updated.code}",
+            detail={"before": before, "after": after},
+        )
 
     def perform_destroy(self, instance):
-        """内置角色: 禁止删除."""
+        """内置角色: 禁止删除. 成功则记审计."""
         if instance.is_builtin:
             raise PermissionDenied("内置角色不可删除")
+        role_id = instance.id
+        role_code = instance.code
         instance.delete()
+        log_action(
+            self.request,
+            AuditLog.ACTION_DELETE,
+            "role",
+            target_id=role_id,
+            target_repr=f"角色 {role_code}",
+        )
 
     @extend_schema(
         methods=["GET"],
@@ -84,6 +117,16 @@ class RoleViewSet(ModelViewSet):
         obj, created = RolePermission.objects.get_or_create(role=role, permission=permission)
         # 清该角色下所有用户的权限缓存
         invalidate_role_perms(role.id)
+        # 审计: 只在新分配时记 (已存在时幂等, 不记)
+        if created:
+            log_action(
+                request,
+                AuditLog.ACTION_ASSIGN,
+                "role_permission",
+                target_id=role.id,
+                target_repr=f"角色 {role.code}",
+                detail={"permission": permission.code},
+            )
         return Response(
             RolePermissionSerializer(obj).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -109,7 +152,17 @@ class RoleViewSet(ModelViewSet):
         """DELETE /api/rbac/roles/{pk}/permissions/{permission_id}/ 移除某角色的某权限."""
         role = get_object_or_404(Role, pk=pk)
         obj = get_object_or_404(RolePermission, role=role, permission_id=permission_id)
+        permission_code = obj.permission.code
         obj.delete()
         # 清该角色下所有用户的权限缓存
         invalidate_role_perms(role.id)
+        # 审计
+        log_action(
+            request,
+            AuditLog.ACTION_REMOVE,
+            "role_permission",
+            target_id=role.id,
+            target_repr=f"角色 {role.code}",
+            detail={"permission": permission_code},
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
