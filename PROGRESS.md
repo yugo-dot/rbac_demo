@@ -105,6 +105,7 @@ rbac_demo/
 - fb950b6 feat: 角色 / 权限 CRUD 接口 (ModelViewSet + DefaultRouter)
 - af8d801 docs: PROGRESS.md 补充 commit 记录
 - 354815d feat: 自定义权限类 HasPerm
+- 46336a1 feat: 示例文章接口 + RBAC 保护验证 (手动 + 单元测试)
 
 ## 七、下一步
 
