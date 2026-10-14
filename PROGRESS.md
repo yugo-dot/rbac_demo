@@ -39,6 +39,8 @@
 - [x] 修复测试跨类缓存污染 (LocMemCache -> DummyCache) + 0005 迁移改用 schema_editor 兼容 SQLite
 - [x] 推送到 GitHub (yugo-dot/rbac_demo)
 - [x] GitHub Actions CI 跑通 (MySQL 8.0 + Redis 7 服务, 53 测试全过, 约 1.5 分钟)
+- [x] 审计日志 (AuditLog + log_action + 4 个 ViewSet 挂钩 + 查询接口)
+- [x] CasbinRule 模型声明 (修幽灵迁移, Django 不再生成 DeleteModel)
 
 ## 二、下一步
 

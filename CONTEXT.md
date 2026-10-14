@@ -66,7 +66,9 @@ rbac_demo/
 │   │   └── migrations/
 │   ├── rbac/
 │   │   ├── models/
-│   │   │   ├── __init__.py      (导出 Role / Permission / UserRole / RolePermission)
+│   │   │   ├── __init__.py      (导出 AuditLog / CasbinRule / Role / Permission / UserRole / RolePermission)
+│   │   │   ├── audit_log.py     (审计日志)
+│   │   │   ├── casbin_rule.py   (casbin_rule 表映射, managed=False)
 │   │   │   ├── role.py          (含 is_builtin)
 │   │   │   ├── permission.py    (含 is_builtin)
 │   │   │   ├── user_role.py
@@ -77,22 +79,26 @@ rbac_demo/
 │   │   │   ├── permission.py
 │   │   │   ├── user_role.py
 │   │   │   ├── role_permission.py
-│   │   │   └── policy.py        (PolicySerializer, 策略不是 Django 模型)
+│   │   │   ├── policy.py        (PolicySerializer, 策略不是 Django 模型)
+│   │   │   └── audit_log.py     (AuditLogSerializer, 只读)
 │   │   ├── views/
 │   │   │   ├── __init__.py
 │   │   │   ├── role.py          (含角色权限分配 action)
 │   │   │   ├── permission.py
 │   │   │   ├── user_role.py     (用户角色分配 action)
-│   │   │   └── policy.py        (PolicyViewSet: list / create / destroy)
+│   │   │   ├── policy.py        (PolicyViewSet: list / create / destroy)
+│   │   │   └── audit_log.py     (AuditLogViewSet: 只读)
 │   │   ├── permissions.py       (HasPerm 接口级 + HasAbacPerm 对象级)
 │   │   ├── cache.py             (用户权限缓存失效工具)
 │   │   ├── abac.py              (Casbin enforcer 封装 + Adapter + build_sub)
+│   │   ├── audit.py             (审计日志工具 log_action)
 │   │   ├── urls.py              (DefaultRouter 注册)
 │   │   ├── admin.py
 │   │   ├── apps.py
 │   │   ├── tests.py
 │   │   └── migrations/          (0003 种子权限, 0004 is_builtin, 0005 casbin_rule,
-│   │                             0006 article update/delete, 0007 策略种子, 0008 policy 权限)
+│   │                             0006 article update/delete, 0007 策略种子,
+│   │                             0008 policy 权限, 0009 audit_log, 0010 audit_log 权限)
 │   └── articles/
 │       ├── models.py            (Article: author / status / visibility)
 │       ├── serializers.py       (ArticleSerializer)
@@ -324,6 +330,22 @@ cat docker-compose.yml
   - 原因: `BIGINT AUTO_INCREMENT` 是 MySQL 方言, SQLite 不认
   - `atomic = False` (MySQL DDL 不能在事务里跑)
   - `config.settings.base` 支持 `USE_SQLITE=true` 切 SQLite (CI 用)
+- 审计日志 (AuditLog):
+  - 记录 RBAC 管理面的写操作 (create / update / delete / assign / remove)
+  - 读操作默认不记, settings.AUDIT_LOG_READ_OPERATIONS=True 时也记 read
+  - 独立表 audit_log, operator 用 SET_NULL (用户删了日志还在)
+  - target_repr 存可读描述 (即使目标对象被删, 日志还能看懂)
+  - detail 用 JSONField 存 before / after (MySQL 5.7+ / SQLite 都支持)
+  - 两个索引: (target_type, target_id) 查某对象历史, (operator, -created_at) 查某人操作
+  - 工具函数 apps/rbac/audit.py 的 log_action()
+  - 在 4 个 ViewSet 挂钩: RoleViewSet / PermissionViewSet / UserRoleViewSet / PolicyViewSet
+  - 幂等操作 (get_or_create 返回 created=False) 不记日志, 避免噪声
+  - 查询接口 GET /api/rbac/audit-logs/ (只读 + 分页 + 过滤), 权限 rbac:audit_log:read
+- CasbinRule 模型声明 (修幽灵迁移):
+  - models/casbin_rule.py: managed=False, db_table="casbin_rule"
+  - 目的: 让 Django 迁移系统知道这张表还在, 不再生成 DeleteModel(CasbinRule)
+  - 起因: 0005 用 CreateModel 建了它, 但 models/__init__.py 没导出, Django 以为被删了
+  - 表本身由 0005 的 schema_editor.create_model() 建, 模型声明只是"占位"
 - 代码门禁: ruff + pre-commit
   - ruff 负责 lint (E/F/I/UP/B/SIM) + format, 配置在 pyproject.toml
   - 忽略规则: RUF012 (Django/DRF 类属性惯例), RUF022 (__all__ 顺序), SIM102, E501
