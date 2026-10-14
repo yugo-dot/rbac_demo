@@ -19,7 +19,21 @@ class RolePermissionAssignmentTests(APITestCase):
             username='bob', password='bob12345', email='bob@example.com'
         )
         cls.role_editor = Role.objects.create(name='编辑', code='editor')
-        cls.perm_read = Permission.objects.create(name='读取文章', code='article:read')
+        cls.perm_read = Permission.objects.get_or_create(
+            code='article:read', defaults={'name': '读取文章'}
+        )[0]
+
+        # alice 加一个管理员角色, 绑全部 rbac:* 权限 (种子数据已建)
+        cls.role_admin = Role.objects.create(name='管理员', code='admin')
+        admin_perm_codes = [
+            'rbac:role:read', 'rbac:role:manage',
+            'rbac:permission:read', 'rbac:permission:manage',
+            'rbac:user_role:read', 'rbac:user_role:manage',
+        ]
+        for code in admin_perm_codes:
+            perm = Permission.objects.get(code=code)
+            RolePermission.objects.create(role=cls.role_admin, permission=perm)
+        UserRole.objects.create(user=cls.alice, role=cls.role_admin)
 
     def _login(self, username, password):
         resp = self.client.post(
@@ -120,9 +134,23 @@ class PermissionListFeatureTests(APITestCase):
         # 建 25 条权限, 其中 3 条含 "文章"
         for i in range(1, 23):
             Permission.objects.create(name=f'演示 {i}', code=f'demo:{i:02d}')
-        Permission.objects.create(name='读文章', code='article:read')
+        Permission.objects.get_or_create(
+            code='article:read', defaults={'name': '读文章'}
+        )
         Permission.objects.create(name='写文章', code='article:write')
         Permission.objects.create(name='删文章', code='article:delete')
+
+        # alice 加管理员角色, 绑全部 rbac:* 权限
+        role_admin = Role.objects.create(name='管理员', code='admin')
+        for code in [
+            'rbac:role:read', 'rbac:role:manage',
+            'rbac:permission:read', 'rbac:permission:manage',
+            'rbac:user_role:read', 'rbac:user_role:manage',
+        ]:
+            RolePermission.objects.create(
+                role=role_admin, permission=Permission.objects.get(code=code)
+            )
+        UserRole.objects.create(user=cls.alice, role=role_admin)
 
     def setUp(self):
         token = self.client.post(
@@ -133,17 +161,19 @@ class PermissionListFeatureTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def test_pagination_default_page_size(self):
-        """默认每页 20 条."""
+        """默认每页 20 条 (总数动态取, 不写死, 避免受种子数据影响)."""
+        total = Permission.objects.count()
         resp = self.client.get(self.url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(resp.data['count'], 25)
-        self.assertEqual(len(resp.data['results']), 20)
+        self.assertEqual(resp.data['count'], total)
+        self.assertEqual(len(resp.data['results']), min(20, total))
 
     def test_pagination_second_page(self):
-        """第 2 页剩 5 条."""
+        """第 2 页应有 total - 20 条."""
+        total = Permission.objects.count()
         resp = self.client.get(self.url, {'page': 2})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(resp.data['results']), 5)
+        self.assertEqual(len(resp.data['results']), max(0, total - 20))
 
     def test_filter_by_code(self):
         """精确过滤 code=article:read."""
@@ -153,13 +183,15 @@ class PermissionListFeatureTests(APITestCase):
         self.assertEqual(resp.data['results'][0]['code'], 'article:read')
 
     def test_search(self):
-        """搜索 name 含 '文章'."""
+        """搜索 name 含 '文章', 数量动态取."""
+        expected = Permission.objects.filter(name__icontains='文章').count()
         resp = self.client.get(self.url, {'search': '文章'})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(resp.data['count'], 3)
+        self.assertEqual(resp.data['count'], expected)
 
     def test_ordering(self):
-        """按 code 倒序, 第一条应是 demo:22."""
+        """按 code 倒序: 返回结果应严格递减."""
         resp = self.client.get(self.url, {'ordering': '-code'})
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(resp.data['results'][0]['code'], 'demo:22')
+        codes = [r['code'] for r in resp.data['results']]
+        self.assertEqual(codes, sorted(codes, reverse=True))

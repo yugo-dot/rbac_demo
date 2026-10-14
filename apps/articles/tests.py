@@ -15,8 +15,12 @@ class ArticleDemoPermissionTests(APITestCase):
     @classmethod
     def setUpTestData(cls):
         # 权限点
-        cls.p_read = Permission.objects.create(name='读取文章', code='article:read')
-        cls.p_create = Permission.objects.create(name='创建文章', code='article:create')
+        cls.p_read = Permission.objects.get_or_create(
+            code='article:read', defaults={'name': '读取文章'}
+        )[0]
+        cls.p_create = Permission.objects.get_or_create(
+            code='article:create', defaults={'name': '创建文章'}
+        )[0]
 
         # 角色 editor, 绑定两个权限
         cls.role_editor = Role.objects.create(name='编辑', code='editor')

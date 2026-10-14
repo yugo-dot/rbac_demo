@@ -8,6 +8,7 @@ from rest_framework.viewsets import ViewSet
 
 from rbac.cache import invalidate_user_perms
 from rbac.models import Role, UserRole
+from rbac.permissions import HasPerm
 from rbac.serializers import (
     UserRoleInputSerializer,
     UserRoleSerializer,
@@ -18,6 +19,13 @@ User = get_user_model()
 
 class UserRoleViewSet(ViewSet):
     """用户 - 角色 分配接口, 挂在 /api/rbac/users/ 下."""
+
+    permission_classes = [HasPerm]
+    required_perms = {
+        'GET': ['rbac:user_role:read'],
+        'POST': ['rbac:user_role:manage'],
+        'DELETE': ['rbac:user_role:manage'],
+    }
 
     @extend_schema(
         summary='用户列表 (简化版)',

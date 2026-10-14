@@ -14,8 +14,12 @@ class MeViewTests(APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        p_read = Permission.objects.create(name='读取文章', code='article:read')
-        p_create = Permission.objects.create(name='创建文章', code='article:create')
+        p_read = Permission.objects.get_or_create(
+            code='article:read', defaults={'name': '读取文章'}
+        )[0]
+        p_create = Permission.objects.get_or_create(
+            code='article:create', defaults={'name': '创建文章'}
+        )[0]
 
         role_editor = Role.objects.create(name='编辑', code='editor')
         RolePermission.objects.create(role=role_editor, permission=p_read)

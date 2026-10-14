@@ -7,6 +7,7 @@ from rest_framework.viewsets import ModelViewSet
 
 from rbac.cache import invalidate_role_perms
 from rbac.models import Permission, Role, RolePermission
+from rbac.permissions import HasPerm
 from rbac.serializers import (
     RolePermissionInputSerializer,
     RolePermissionSerializer,
@@ -19,6 +20,15 @@ class RoleViewSet(ModelViewSet):
 
     queryset = Role.objects.all().order_by('-id')
     serializer_class = RoleSerializer
+
+    permission_classes = [HasPerm]
+    required_perms = {
+        'GET': ['rbac:role:read'],
+        'POST': ['rbac:role:manage'],
+        'PUT': ['rbac:role:manage'],
+        'PATCH': ['rbac:role:manage'],
+        'DELETE': ['rbac:role:manage'],
+    }
 
     # 过滤 / 搜索 / 排序
     filterset_fields = ['code', 'name']
