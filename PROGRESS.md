@@ -32,6 +32,9 @@
 - [x] 内置角色/权限保护 (is_builtin, 禁止改 code / 禁止删, 8 个种子权限标内置)
 - [x] 代码门禁: ruff + pre-commit (commit 前自动 lint + format)
 - [x] 注册 / 改密 / 登出 / token 刷新接口 (SimpleJWT blacklist, 改密后强制重登)
+- [x] ABAC 基础设施: Casbin + casbin_rule 表 + enforcer 封装 (apps/rbac/abac.py)
+- [x] Article 真实 CRUD + 两层权限 (HasPerm 接口级 + HasAbacPerm 对象级)
+- [x] Casbin 策略管理接口 (/api/rbac/policies/) + 5 条默认策略种子
 
 ## 二、下一步
 
@@ -39,7 +42,7 @@
 
 1. [x] 内置角色/权限保护 (is_builtin 标记, 禁止删改)
 2. [x] 用户注册 / 改密 / 刷新 token 接口 (+ 登出)
-3. [ ] ABAC 数据级权限 (articles 落地)
+3. [x] ABAC 数据级权限 (Casbin, articles 落地)
 4. [x] 接 pre-commit (ruff), CI 待推 Gitee 时再加
 
 ## 三、当前卡点

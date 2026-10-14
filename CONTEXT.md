@@ -280,6 +280,20 @@ cat docker-compose.yml
   - 注册即登录 (直接返回 access/refresh), 密码走 Django validate_password 强度校验
   - 注册时 email/phone 空串按 None 处理, 避免 unique 冲突
   - 接口: POST /register/, /logout/, /change-password/, /token/refresh/
+- ABAC 数据级权限 (Casbin):
+  - 用 casbin (pycasbin) + 自定义 Adapter, 策略存 MySQL 的 casbin_rule 表
+  - 不用 casbin_adapter 的 AppConfig.ready (它在 app 初始化时访问 DB, 会引发警告和迁移问题)
+  - casbin_rule 建表迁移在 rbac/0005, 不用 CreateModel 而是 RunPython + 原生 SQL + atomic=False
+  - 模型定义在项目根 casbin_model.conf, ABAC 模式: (sub, obj, act) + eval(sub_rule)
+  - sub / obj 都是 dict, 策略表达式用 r.sub.xxx / r.obj.xxx 引用属性
+  - enforcer 用 lru_cache 缓存, 策略变更后 clear_enforcer_cache()
+  - 两层权限: HasPerm (接口级, 需 article:read 等编码) + HasAbacPerm (对象级, 判具体数据)
+  - 行级过滤在 ViewSet.get_queryset 里做, 对象级在 HasAbacPerm.has_object_permission 里做
+  - 越权返回 404 而非 403 (查询集已过滤, DRF 找不到对象, 避免信息泄露)
+  - 策略管理接口 /api/rbac/policies/ (list / create / destroy), 用 rbac:policy:read / rbac:policy:manage
+  - 策略种子在 rbac/0007 (5 条: 作者全权 / 已发布公开 / 主编可读)
+  - 已知取舍: get_queryset 里逐行调 enforce 是 N 次判定, 量大时会慢;
+    主流优化是先用 Q 对象在 DB 层粗过滤, 只对候选行跑 Casbin
 - 代码门禁: ruff + pre-commit
   - ruff 负责 lint (E/F/I/UP/B/SIM) + format, 配置在 pyproject.toml
   - 忽略规则: RUF012 (Django/DRF 类属性惯例), RUF022 (__all__ 顺序), SIM102, E501
