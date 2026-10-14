@@ -264,6 +264,13 @@ cat docker-compose.yml
   分页/搜索类断言不写死绝对数量, 改为相对当前权限表总量 (避免受种子数据影响)
 - 文档拆分 (本次): CONTEXT.md 放稳定内容, PROGRESS.md 放变动内容;
   Git 提交记录不再手写, 直接 git log 看
+- 内置角色/权限保护 (is_builtin):
+  - Role / Permission 各加 is_builtin 布尔字段, 默认 False
+  - 8 个种子权限点在迁移 0004_add_is_builtin 里标为内置
+  - 约束: 内置角色/权限不可删, code 不可改; name / description 可改
+  - 校验在 ViewSet 的 perform_update / perform_destroy 里, 抛 PermissionDenied (403)
+  - 超管也不放行 (系统级保护, 跟用户权限无关)
+  - 主流参考: Keycloak 内置角色禁止删改, Django Guardian / 葡萄城同类设计
 
 ## 八、协作方式约定
 
