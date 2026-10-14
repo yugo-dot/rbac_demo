@@ -44,7 +44,7 @@ class RolePermissionAssignmentTests(APITestCase):
             {"username": username, "password": password},
             format="json",
         )
-        self.assertEqual(resp.status_code, 999)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         return resp.data["access"]
 
     def setUp(self):
