@@ -171,6 +171,10 @@ SPECTACULAR_SETTINGS = {
 
 
 # SimpleJWT 配置
+# Casbin 策略存储 (策略存 MySQL, 通过 casbin_adapter)
+CASBIN_MODEL = os.path.join(BASE_DIR, "casbin_model.conf")
+
+
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=2),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
