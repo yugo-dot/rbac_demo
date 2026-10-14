@@ -44,6 +44,13 @@ rbac_demo/
 │   │   ├── models/
 │   │   │   ├── __init__.py      (from .user import User)
 │   │   │   └── user.py          (User 继承 AbstractUser)
+│   │   ├── serializers/
+│   │   │   ├── __init__.py      (导出 LoginSerializer)
+│   │   │   └── auth.py
+│   │   ├── views/
+│   │   │   ├── __init__.py      (导出 LoginView)
+│   │   │   └── auth.py
+│   │   ├── urls.py
 │   │   └── migrations/
 │   └── rbac/
 │       ├── models/
@@ -77,6 +84,7 @@ rbac_demo/
 - [x] models 拆成包
 - [x] User.get_permission_codes() 方法
 - [x] JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
+- [x] 角色 / 权限的 CRUD 接口 (ModelViewSet + DefaultRouter)
 
 ## 六、Git 提交记录
 
@@ -91,7 +99,7 @@ rbac_demo/
 
 1. [x] 给 User 加方法: get_permission_codes()
 2. [x] 写 JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
-3. [ ] 写角色 / 权限的 CRUD 接口
+3. [x] 写角色 / 权限的 CRUD 接口
 4. [ ] 写自定义权限类 HasPerm
 5. [ ] 用 RBAC 保护示例接口, 写测试验证
 
