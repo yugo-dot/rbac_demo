@@ -135,10 +135,13 @@ if "test" in sys.argv:
         }
     }
 else:
+    # Redis 地址从环境变量读: 本地 Docker 是 redis:6379, CI 是 127.0.0.1:6379
+    redis_host = os.environ.get("REDIS_HOST", "redis")
+    redis_port = os.environ.get("REDIS_PORT", "6379")
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": "redis://redis:6379/1",
+            "LOCATION": f"redis://{redis_host}:{redis_port}/1",
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
                 "IGNORE_EXCEPTIONS": True,
