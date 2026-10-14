@@ -94,6 +94,8 @@ rbac_demo/
 - e4e6a86 feat: User 增加 get_permission_codes 方法
 - da4a899 docs: PROGRESS.md 补充 commit 记录
 - dec6c94 feat: JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
+- e6616ce docs: PROGRESS.md 补充 commit 记录
+- fb950b6 feat: 角色 / 权限 CRUD 接口 (ModelViewSet + DefaultRouter)
 
 ## 七、下一步
 
