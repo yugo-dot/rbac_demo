@@ -195,3 +195,89 @@ class PermissionListFeatureTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         codes = [r['code'] for r in resp.data['results']]
         self.assertEqual(codes, sorted(codes, reverse=True))
+
+
+class BuiltinProtectionTests(APITestCase):
+    """验证内置角色/权限的保护 (禁止改 code, 禁止删)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.alice = User.objects.create_user(
+            username='alice', password='alice12345', email='alice@example.com'
+        )
+        # alice 给全部 rbac:* 权限
+        role_admin = Role.objects.create(name='管理员', code='admin')
+        for code in [
+            'rbac:role:read', 'rbac:role:manage',
+            'rbac:permission:read', 'rbac:permission:manage',
+            'rbac:user_role:read', 'rbac:user_role:manage',
+        ]:
+            RolePermission.objects.create(
+                role=role_admin, permission=Permission.objects.get(code=code)
+            )
+        UserRole.objects.create(user=cls.alice, role=role_admin)
+
+        # 内置权限 (种子数据里就有)
+        cls.builtin_perm = Permission.objects.get(code='article:read')
+        # 非内置权限
+        cls.custom_perm = Permission.objects.create(
+            name='自定义权限', code='custom:read'
+        )
+
+    def setUp(self):
+        resp = self.client.post(
+            '/api/users/login/',
+            {'username': 'alice', 'password': 'alice12345'},
+            format='json',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
+
+    # --- 权限点 ---
+
+    def test_delete_builtin_permission_returns_403(self):
+        url = f'/api/rbac/permissions/{self.builtin_perm.id}/'
+        resp = self.client.delete(url)
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Permission.objects.filter(id=self.builtin_perm.id).exists())
+
+    def test_change_builtin_permission_code_returns_403(self):
+        url = f'/api/rbac/permissions/{self.builtin_perm.id}/'
+        resp = self.client.patch(url, {'code': 'article:read2'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_change_builtin_permission_name_returns_200(self):
+        url = f'/api/rbac/permissions/{self.builtin_perm.id}/'
+        resp = self.client.patch(url, {'name': '新名字'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_delete_custom_permission_returns_204(self):
+        url = f'/api/rbac/permissions/{self.custom_perm.id}/'
+        resp = self.client.delete(url)
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+    # --- 角色 ---
+
+    def test_delete_builtin_role_returns_403(self):
+        role = Role.objects.create(name='内置角色', code='builtin_role', is_builtin=True)
+        url = f'/api/rbac/roles/{role.id}/'
+        resp = self.client.delete(url)
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Role.objects.filter(id=role.id).exists())
+
+    def test_change_builtin_role_code_returns_403(self):
+        role = Role.objects.create(name='内置角色', code='builtin_role', is_builtin=True)
+        url = f'/api/rbac/roles/{role.id}/'
+        resp = self.client.patch(url, {'code': 'builtin_role2'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_change_builtin_role_name_returns_200(self):
+        role = Role.objects.create(name='内置角色', code='builtin_role', is_builtin=True)
+        url = f'/api/rbac/roles/{role.id}/'
+        resp = self.client.patch(url, {'name': '新名字'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_delete_custom_role_returns_204(self):
+        role = Role.objects.create(name='自定义角色', code='custom_role')
+        url = f'/api/rbac/roles/{role.id}/'
+        resp = self.client.delete(url)
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
