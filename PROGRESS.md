@@ -34,6 +34,9 @@
 - 本项目的容器: rbac_demo_web (映射 8000:8000)
 - 数据库: rbac_demo (用户 rbac_user / rbac_pass_123)
 - Redis 连接: host=redis, port=6379
+- 对外入口: shared-nginx 反代 http://rbac.localhost -> rbac_demo_web:8000
+  - hosts 需加: 127.0.0.1 rbac.localhost
+  - nginx 配置: /home/gaoyu/docker-infra/nginx/conf.d/rbac.conf (不在本项目仓库里)
 
 ## 三、目录结构
 
@@ -134,6 +137,7 @@ rbac_demo/
 - [x] Redis 缓存 get_permission_codes (key user:perms:{uid}, TTL 300s, 变动时主动清)
 - [x] 分页 + django-filter + 搜索 + 排序 (Role / Permission 列表)
 - [x] settings 拆分 base/dev/prod (通过 DJANGO_SETTINGS_MODULE 选择)
+- [x] 接 shared-nginx 对外暴露 (子域名 rbac.localhost, 反代到 rbac_demo_web:8000)
 
 ## 六、Git 提交记录
 
@@ -155,6 +159,7 @@ rbac_demo/
 - cfc58b5 feat: 用户-角色 / 角色-权限 分配接口 (ViewSet @action)
 - 19cfa00 feat: Redis 缓存 get_permission_codes (主动失效 + TTL 兜底)
 - a97881a feat: 分页 + django-filter + 搜索 + 排序 (Role / Permission 列表)
+- 41fec44 refactor: settings 拆分 base/dev/prod + 测试缓存隔离
 
 ## 七、下一步
 
@@ -164,7 +169,7 @@ rbac_demo/
 2. [x] 当前用户信息接口 GET /api/users/me/ (返回资料 + 权限编码)
 3. [x] Redis 缓存 get_permission_codes()
 4. [x] 接 django-filter + 分页, 完善列表接口
-5. [ ] 接 shared-nginx 对外暴露
+5. [x] 接 shared-nginx 对外暴露
 6. [x] settings 拆 base/dev/prod
 
 ## 八、当前卡点
@@ -273,6 +278,10 @@ cat apps/users/tests.py
   docker-compose.yml 里通过环境变量指定, 生产改为 config.settings.prod
 - 测试环境缓存隔离: base.py 里检测 sys.argv 里有没有 'test',
   有则用 LocMemCache, 否则用 Redis; 避免测试数据写脏生产 Redis
+- 对外暴露方案: 走子域名 rbac.localhost (而非子路径)
+  - 优点: Django 侧零改动, 不用处理路径前缀
+  - nginx 里单独加一个 server_name rbac.localhost 的 server, default.conf 保持不动
+  - shared-nginx 和 rbac_demo_web 都在 shared-services 网络, nginx 直接 proxy_pass http://rbac_demo_web:8000
 
 ## 十二、协作方式约定
 
