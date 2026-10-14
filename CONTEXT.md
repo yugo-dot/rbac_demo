@@ -359,6 +359,23 @@ cat docker-compose.yml
     - DB_USER=root (rbac_user 无建测试库权限)
     - apt-get install default-libmysqlclient-dev (mysqlclient 编译需要)
   - 远端: origin=Gitee, github=GitHub (两边都推)
+- Django admin 注册 (超管后台, 不替代 RBAC API):
+  - admin 权限体系 (is_staff/is_superuser) 与项目 RBAC 是两套, 不做映射
+  - admin 只给超管用, 业务 RBAC 走 API (前端 Vue3 直接调 API)
+  - Role / Permission 的 code / is_builtin 只读, 内置对象 has_delete_permission 返回 False
+    (防止从 admin 绕过 API 层的 is_builtin 保护)
+  - AuditLog 全只读 (has_add/change/delete_permission 全 False), 审计不可篡改
+  - UserProfile 既内联到 UserAdmin, 也独立注册 (方便按昵称/性别筛)
+- 演示数据种子命令 (seed_demo):
+  - 位置 apps/rbac/management/commands/seed_demo.py
+  - 10 用户 (admin 超管 + user01~09) / 4 角色 (admin/editor/viewer/guest) / 2000 文章
+  - 密码统一 admin; email 唯一 (userXX@example.com), 避免 unique 冲突
+  - random.seed(42) 固定种子, 数据分布可复现, 方便性能对比
+  - --flush 只清业务数据 (Article/UserRole/RolePermission/Role/UserProfile/非超管 User),
+    保留 Permission (13) 和 CasbinRule (5)
+  - 幂等: 用户/角色 get_or_create; 文章已有则跳过 (要重造加 --flush)
+  - 用 bulk_create(batch_size=500) 批量插文章
+  - seed 后遍历用户清权限缓存 (invalidate_user_perms)
 
 ## 八、协作方式约定
 
