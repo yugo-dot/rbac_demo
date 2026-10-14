@@ -87,7 +87,7 @@ rbac_demo/
 │   │   ├── admin.py
 │   │   ├── apps.py
 │   │   ├── tests.py
-│   │   └── migrations/
+│   │   └── migrations/          (0003_seed_permissions: 预置权限点)
 │   └── articles/
 │       ├── views.py             (ArticleDemoView, 用 HasPerm 保护)
 │       ├── urls.py
@@ -114,10 +114,11 @@ rbac_demo/
 ## 四、关键约定
 
 - 注释风格: 中文注释, 使用英文标点
-- 权限编码格式: 模块:操作 (例如 article:create, user:delete)
+- 权限编码格式: 模块:操作 (例如 article:create, rbac:role:manage)
 - models / serializers / views 统一拆成包, 每个业务模块一个文件, __init__.py 统一导出
 - apps 下的业务 app 直接放在 apps/ 下, INSTALLED_APPS 里用不带 apps. 前缀的名字 (例如 'users' / 'rbac' / 'articles')
 - settings 已拆 base/dev/prod, 通过 DJANGO_SETTINGS_MODULE 选择, 默认 dev
+- 权限编码粒度: 读写分开 (read / manage), 资源+操作; 分配关联视为对资源的 manage
 
 ## 五、已完成
 
@@ -140,6 +141,9 @@ rbac_demo/
 - [x] settings 拆分 base/dev/prod (通过 DJANGO_SETTINGS_MODULE 选择)
 - [x] 接 shared-nginx 对外暴露 (子域名 rbac.localhost, 反代到 rbac_demo_web:8000)
 - [x] API 文档 (drf-spectacular): /api/schema/ + /api/docs/ (Swagger UI, 静态文件走 sidecar 不走 CDN)
+- [x] 预置权限点种子数据 (data migration: 6 个 rbac:* + 2 个 article:*)
+- [x] RBAC 管理接口叠加 HasPerm 权限保护 (角色/权限点/用户角色按读/写拆分)
+- [x] 测试适配 (19 个测试全过)
 
 ## 六、Git 提交记录
 
@@ -163,6 +167,9 @@ rbac_demo/
 - a97881a feat: 分页 + django-filter + 搜索 + 排序 (Role / Permission 列表)
 - 41fec44 refactor: settings 拆分 base/dev/prod + 测试缓存隔离
 - 8d2f52e docs: PROGRESS.md 记录 shared-nginx 对接
+- 53fc8ac feat: API 文档 drf-spectacular (Swagger UI + sidecar 本地静态)
+- 4b0b6d6 feat: 预置权限点种子数据 (data migration)
+- 5a180cb feat: RBAC 管理接口叠加 HasPerm 权限保护 + 测试适配
 
 ## 七、下一步
 
@@ -174,6 +181,15 @@ rbac_demo/
 4. [x] 接 django-filter + 分页, 完善列表接口
 5. [x] 接 shared-nginx 对外暴露
 6. [x] settings 拆 base/dev/prod
+7. [x] 预置权限点种子数据 (data migration)
+8. [x] RBAC 管理接口叠加 HasPerm 权限保护 (闭环)
+
+后续候选方向 (尚未开始, 排序即推荐顺序):
+
+9. [ ] 内置角色/权限保护 (is_builtin 标记, 禁止删改)
+10. [ ] 用户注册 / 改密 / 刷新 token 接口
+11. [ ] ABAC 数据级权限 (articles 落地)
+12. [ ] 接 CI / pre-commit
 
 ## 八、当前卡点
 
@@ -228,6 +244,9 @@ cat apps/articles/views.py
 cat apps/rbac/permissions.py
 cat apps/rbac/cache.py
 
+# 种子数据
+cat apps/rbac/migrations/0003_seed_permissions.py
+
 # 路由
 cat config/urls.py
 cat apps/users/urls.py
@@ -242,6 +261,7 @@ cat config/settings/prod.py
 # 测试
 cat apps/articles/tests.py
 cat apps/users/tests.py
+cat apps/rbac/tests.py
 
 # git 状态
 git log --oneline -10
@@ -275,7 +295,6 @@ cat docker-compose.yml
   - UserRoleViewSet 挂在 /api/rbac/users/, 含 roles / remove_role
   - RoleViewSet 加 permissions / remove_permission
   - 写入用 get_or_create 保证幂等 (201 新建 / 200 已存在)
-- 现阶段这些接口只要求 IsAuthenticated, 未叠加 HasPerm (等权限数据稳定后再加)
 - 用户权限缓存: key = user:perms:{uid}, value = 权限码列表, TTL = 300s
   - 失效: 分配 / 移除用户角色, 或给角色增删权限时, 主动清相关用户缓存
   - 工具函数: apps/rbac/cache.py 的 invalidate_user_perms / invalidate_role_perms
@@ -298,6 +317,23 @@ cat docker-compose.yml
   - 优点: Django 侧零改动, 不用处理路径前缀
   - nginx 里单独加一个 server_name rbac.localhost 的 server, default.conf 保持不动
   - shared-nginx 和 rbac_demo_web 都在 shared-services 网络, nginx 直接 proxy_pass http://rbac_demo_web:8000
+- 权限点种子数据用 data migration (而非 fixture):
+  - data migration 随 migrate 自动执行, 测试库建库时也会加载, 幂等 (get_or_create)
+  - fixture 每次 loaddata 全量覆盖, 且不会自动加载, 只适合测试固定数据或手动导入
+  - 迁移里用 apps.get_model('rbac', 'Permission'), 不直接 import 模型 (历史版本安全)
+  - 提供 reverse_code (remove_permissions) 支持回滚
+- 管理面权限编码方案 (6 个, 读写分开):
+  - rbac:role:read / rbac:role:manage
+  - rbac:permission:read / rbac:permission:manage
+  - rbac:user_role:read / rbac:user_role:manage
+  - 分配角色权限的动作 (POST/DELETE /roles/{id}/permissions/) 归入 rbac:role:manage
+    (视为修改角色的子资源, 不单拆 role_permission)
+  - 主流做法参考: Keycloak 的 view/manage scope 分离, Casbin 的 obj+act 模型
+- 管理面接口保护: RoleViewSet / PermissionViewSet / UserRoleViewSet 都叠加 HasPerm
+  - 按 request.method 映射到对应编码, 同一 action 上挂多个 method 时天然生效
+  - 超管仍由 is_superuser 放行, 不加 bootstrap 特例
+- 测试适配种子数据: 测试里不再硬 create 种子权限, 改用 get_or_create;
+  分页/搜索类断言不写死绝对数量, 改为相对当前权限表总量 (避免受种子数据影响)
 
 ## 十二、协作方式约定
 
