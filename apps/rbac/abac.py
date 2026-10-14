@@ -103,3 +103,21 @@ def remove_policy(sub_rule: str, obj: str, act: str) -> bool:
 def list_policies() -> list[list[str]]:
     """列出所有策略."""
     return get_enforcer().get_policy()
+
+
+def build_sub(user) -> dict:
+    """从 user 组装 Casbin 主体属性 dict.
+
+    所有用 ABAC 的地方都调这个, 避免重复实现.
+    """
+    from rbac.models import UserRole
+
+    role_code = (
+        UserRole.objects.filter(user=user).values_list("role__code", flat=True).first() or ""
+    )
+    return {
+        "id": user.id,
+        "username": user.username,
+        "is_superuser": user.is_superuser,
+        "role": role_code,
+    }

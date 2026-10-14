@@ -128,7 +128,7 @@ class PermissionListFeatureTests(APITestCase):
             Permission.objects.create(name=f"演示 {i}", code=f"demo:{i:02d}")
         Permission.objects.get_or_create(code="article:read", defaults={"name": "读文章"})
         Permission.objects.create(name="写文章", code="article:write")
-        Permission.objects.create(name="删文章", code="article:delete")
+        Permission.objects.get_or_create(code="article:delete", defaults={"name": "删文章"})
 
         # alice 加管理员角色, 绑全部 rbac:* 权限
         role_admin = Role.objects.create(name="管理员", code="admin")
