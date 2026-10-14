@@ -27,7 +27,7 @@
 - [x] API 文档 (drf-spectacular): /api/schema/ + /api/docs/ (Swagger UI, 静态文件走 sidecar 不走 CDN)
 - [x] 预置权限点种子数据 (data migration: 6 个 rbac:* + 2 个 article:*)
 - [x] RBAC 管理接口叠加 HasPerm 权限保护 (角色/权限点/用户角色按读/写拆分)
-- [x] 测试适配 (19 个测试全过)
+- [x] 测试适配 (种子数据 + 内置保护, 全绿)
 - [x] 文档拆分: CONTEXT.md (稳定) + PROGRESS.md (变动), 砍掉手写 Git 记录
 - [x] 内置角色/权限保护 (is_builtin, 禁止改 code / 禁止删, 8 个种子权限标内置)
 
