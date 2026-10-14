@@ -37,6 +37,8 @@
 - [x] Casbin 策略管理接口 (/api/rbac/policies/) + 5 条默认策略种子
 - [x] 推送到 Gitee (含 7 个 tag, v0.1.0 ~ v0.7.0)
 - [x] 修复测试跨类缓存污染 (LocMemCache -> DummyCache) + 0005 迁移改用 schema_editor 兼容 SQLite
+- [x] 推送到 GitHub (yugo-dot/rbac_demo)
+- [x] GitHub Actions CI 跑通 (MySQL 8.0 + Redis 7 服务, 53 测试全过, 约 1.5 分钟)
 
 ## 二、下一步
 
@@ -53,8 +55,7 @@
 
 ## 四、已知问题 / 搁置项
 
-- **CI 未落地**: Gitee Go 账号无免费构建额度, 尝试失败.
-  - 已验证: 项目在 SQLite 下测试全过 (53/53), `ci.yml` 已就绪过 (后被移除)
-  - 换 GitHub Actions 或其他平台时可复用: 用 SQLite + `requirements-ci.txt` (不含 mysqlclient)
-  - 当前靠本地 `pre-commit` + 手动 `manage.py test` 保证质量
+- **Gitee Go CI 未落地**: 账号无免费构建额度.
+  - 改用 GitHub Actions 已跑通 (见上方"已完成")
+  - Gitee 仅作代码镜像, 不跑 CI
 

@@ -332,7 +332,11 @@ cat docker-compose.yml
   - 选双引号 (ruff-format 默认, 与 black 一致)
   - 首次全量格式化后, 会统一改掉单引号 -> 双引号 (一次性 commit)
   - pre-commit 装在跑 git 的机器 (WSL), 不是容器; 因为 git commit 在 WSL 执行
-  - CI 未落地: Gitee Go 账号无免费额度 (详见 PROGRESS.md 的'已知问题')
+  - CI: GitHub Actions (.github/workflows/ci.yml)
+    - 用 services 起 MySQL 8.0 + Redis 7, 与本地一致
+    - DB_USER=root (rbac_user 无建测试库权限)
+    - apt-get install default-libmysqlclient-dev (mysqlclient 编译需要)
+  - 远端: origin=Gitee, github=GitHub (两边都推)
 
 ## 八、协作方式约定
 
