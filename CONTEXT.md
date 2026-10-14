@@ -98,7 +98,9 @@ rbac_demo/
 │   │   ├── tests.py
 │   │   └── migrations/          (0003 种子权限, 0004 is_builtin, 0005 casbin_rule,
 │   │                             0006 article update/delete, 0007 策略种子,
-│   │                             0008 policy 权限, 0009 audit_log, 0010 audit_log 权限)
+│   │                             0008 policy 权限, 0009 audit_log, 0010 audit_log 权限,
+│   │                             0011 permission module, 0012 module 回填,
+│   │                             0013 visibility 策略)
 │   └── articles/
 │       ├── models.py            (Article: author / status / visibility)
 │       ├── serializers.py       (ArticleSerializer)
@@ -406,6 +408,21 @@ cat docker-compose.yml
     手改会与 code 不一致 (与 Keycloak / Casbin 的处理一致)
   - 列表支持按 module 过滤 (?module=rbac:role) + 排序 (ordering=module)
   - 迁移: 0011 加字段, 0012 回填
+- 数据级权限细化 (visibility 生效):
+  - 策略变更 (迁移 0013): 旧策略 "status=published 即可读" 改为
+    "status=published AND visibility=public 才可读"
+  - 语义:
+    - private 草稿/已发布: 仅作者本人 (作者全权策略覆盖)
+    - public  + published: 任何人可读
+    - team    + published: 暂等同 private (只作者可见)
+  - team 的处理 (主流做法): 字段保留枚举, 策略先不处理, 等引入真实
+    Org/Team 模型后再写 r.sub.org_id == r.obj.org_id 之类
+  - get_queryset 粗筛同步改: Q(author=user) | Q(status=published, visibility=public)
+    (策略改了粗筛必须同步改, 否则会出现安全漏洞: 粗筛放行了不该可见的行)
+  - 验证: user01 可见数从 820 (旧策略) 降到 395 (新策略)
+  - 测试: ArticleVisibilityPolicyTests 覆盖 public/private/team 三种 visibility
+    + 作者本人可见自己的 private 文章
+  - 迁移后需 restart web (清 enforcer lru_cache, 让新策略生效)
 
 ## 八、协作方式约定
 

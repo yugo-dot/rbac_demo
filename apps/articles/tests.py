@@ -168,3 +168,106 @@ class ArticleABACTests(APITestCase):
         ids = [r["id"] for r in resp.data["results"]]
         self.assertIn(self.alice_article.id, ids)
         self.assertIn(self.bob_article.id, ids)
+
+
+class ArticleVisibilityPolicyTests(APITestCase):
+    """验证 visibility 策略: 只有 public + published 才对非作者可见."""
+
+    url = "/api/demo/articles/"
+
+    @classmethod
+    def setUpTestData(cls):
+        # alice 有 article:read 权限
+        cls.p_read = Permission.objects.get_or_create(
+            code="article:read", defaults={"name": "读取文章"}
+        )[0]
+        cls.role_viewer = Role.objects.create(name="只读", code="viewer")
+        RolePermission.objects.create(role=cls.role_viewer, permission=cls.p_read)
+
+        cls.alice = User.objects.create_user(
+            username="alice", password="alice12345", email="alice@example.com"
+        )
+        UserRole.objects.create(user=cls.alice, role=cls.role_viewer)
+
+        cls.bob = User.objects.create_user(
+            username="bob", password="bob12345", email="bob@example.com"
+        )
+
+        # bob 的三种 visibility, 都是 published
+        cls.bob_public = Article.objects.create(
+            title="bob 公开",
+            author=cls.bob,
+            status=Article.STATUS_PUBLISHED,
+            visibility=Article.VISIBILITY_PUBLIC,
+        )
+        cls.bob_private = Article.objects.create(
+            title="bob 私密",
+            author=cls.bob,
+            status=Article.STATUS_PUBLISHED,
+            visibility=Article.VISIBILITY_PRIVATE,
+        )
+        cls.bob_team = Article.objects.create(
+            title="bob 团队",
+            author=cls.bob,
+            status=Article.STATUS_PUBLISHED,
+            visibility=Article.VISIBILITY_TEAM,
+        )
+        # alice 自己的私密已发布
+        cls.alice_private = Article.objects.create(
+            title="alice 私密",
+            author=cls.alice,
+            status=Article.STATUS_PUBLISHED,
+            visibility=Article.VISIBILITY_PRIVATE,
+        )
+
+    def setUp(self):
+        # 加策略: 作者全权读 + 公开已发布可读
+        add_policy("r.sub.id == r.obj.author_id", "article", "read")
+        add_policy(
+            'r.obj.status == "published" and r.obj.visibility == "public"',
+            "article",
+            "read",
+        )
+
+    def tearDown(self):
+        remove_policy("r.sub.id == r.obj.author_id", "article", "read")
+        remove_policy(
+            'r.obj.status == "published" and r.obj.visibility == "public"',
+            "article",
+            "read",
+        )
+
+    def _login(self, username, password):
+        resp = self.client.post(
+            "/api/users/login/",
+            {"username": username, "password": password},
+            format="json",
+        )
+        return resp.data["access"]
+
+    def _visible_ids(self, username, password):
+        token = self._login(username, password)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        return [r["id"] for r in resp.data["results"]]
+
+    def test_public_published_visible_to_others(self):
+        """bob 的 public+published, alice 能看到."""
+        ids = self._visible_ids("alice", "alice12345")
+        self.assertIn(self.bob_public.id, ids)
+
+    def test_private_published_not_visible_to_others(self):
+        """bob 的 private+published, alice 看不到."""
+        ids = self._visible_ids("alice", "alice12345")
+        self.assertNotIn(self.bob_private.id, ids)
+
+    def test_team_published_not_visible_to_others(self):
+        """bob 的 team+published, alice 看不到 (team 暂等同 private)."""
+        ids = self._visible_ids("alice", "alice12345")
+        self.assertNotIn(self.bob_team.id, ids)
+
+    def test_own_private_published_visible_to_author(self):
+        """alice 自己的 private+published, 自己能看 (作者本人)."""
+        ids = self._visible_ids("alice", "alice12345")
+        self.assertIn(self.alice_private.id, ids)

@@ -40,7 +40,7 @@ class ArticleViewSet(ModelViewSet):
         """列表/详情查询集: 按 ABAC 规则过滤.
 
         优化思路 (DB 粗筛 + Casbin 精筛):
-        - 作者本人 / 已发布: 策略上必然可见, 直接放行, 不跑 enforce
+        - 作者本人 / 已发布且公开: 策略上必然可见, 直接放行, 不跑 enforce
         - 其余行: 才逐行 enforce
         注意: 粗筛条件是策略的"软编码", 策略变更时需同步改这里.
         """
@@ -51,12 +51,13 @@ class ArticleViewSet(ModelViewSet):
 
         # 粗筛: 这两类命中策略里的宽松条件, 无需 enforce
         coarse_ids = set(
-            qs.filter(Q(author=user) | Q(status=Article.STATUS_PUBLISHED)).values_list(
-                "id", flat=True
-            )
+            qs.filter(
+                Q(author=user)
+                | Q(status=Article.STATUS_PUBLISHED, visibility=Article.VISIBILITY_PUBLIC)
+            ).values_list("id", flat=True)
         )
 
-        # 剩余行 (非作者本人 且 非已发布) 才跑 enforce
+        # 剩余行 (非作者本人 且 非已发布公开) 才跑 enforce
         sub = build_sub(user)
         rest = qs.exclude(id__in=coarse_ids)
         extra_ids = {a.id for a in rest if enforce(sub, a.to_abac_obj(), "read")}
