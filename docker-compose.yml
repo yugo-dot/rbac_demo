@@ -1,0 +1,26 @@
+services:
+  web:
+    build: .
+    container_name: rbac_demo_web
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DEBUG=1
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=rbac_demo
+      - DB_USER=rbac_user
+      - DB_PASSWORD=rbac_pass_123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - shared
+    tty: true
+
+networks:
+  shared:
+    external: true
+    name: shared-services
