@@ -12,8 +12,8 @@ class MeView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary='当前登录用户信息',
-        description='返回当前用户的资料 + 权限编码列表.',
+        summary="当前登录用户信息",
+        description="返回当前用户的资料 + 权限编码列表.",
         responses={200: MeSerializer},
     )
     def get(self, request, *args, **kwargs):

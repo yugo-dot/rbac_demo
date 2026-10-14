@@ -9,34 +9,33 @@ from rbac.serializers import PermissionSerializer
 class PermissionViewSet(ModelViewSet):
     """权限点的 CRUD 接口."""
 
-    queryset = Permission.objects.all().order_by('-id')
+    queryset = Permission.objects.all().order_by("-id")
     serializer_class = PermissionSerializer
 
     permission_classes = [HasPerm]
     required_perms = {
-        'GET': ['rbac:permission:read'],
-        'POST': ['rbac:permission:manage'],
-        'PUT': ['rbac:permission:manage'],
-        'PATCH': ['rbac:permission:manage'],
-        'DELETE': ['rbac:permission:manage'],
+        "GET": ["rbac:permission:read"],
+        "POST": ["rbac:permission:manage"],
+        "PUT": ["rbac:permission:manage"],
+        "PATCH": ["rbac:permission:manage"],
+        "DELETE": ["rbac:permission:manage"],
     }
 
     # 过滤 / 搜索 / 排序
-    filterset_fields = ['code', 'name']
-    search_fields = ['name', 'code', 'description']
-    ordering_fields = ['id', 'code', 'name', 'created_at']
+    filterset_fields = ["code", "name"]
+    search_fields = ["name", "code", "description"]
+    ordering_fields = ["id", "code", "name", "created_at"]
 
     def perform_update(self, serializer):
         """内置权限: 禁止修改 code."""
         instance = serializer.instance
-        if instance.is_builtin and 'code' in serializer.validated_data:
-            if serializer.validated_data['code'] != instance.code:
-                raise PermissionDenied('内置权限的 code 不可修改')
+        if instance.is_builtin and "code" in serializer.validated_data:
+            if serializer.validated_data["code"] != instance.code:
+                raise PermissionDenied("内置权限的 code 不可修改")
         serializer.save()
 
     def perform_destroy(self, instance):
         """内置权限: 禁止删除."""
         if instance.is_builtin:
-            raise PermissionDenied('内置权限不可删除')
+            raise PermissionDenied("内置权限不可删除")
         instance.delete()
-

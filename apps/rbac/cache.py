@@ -10,13 +10,13 @@ from django.core.cache import cache
 from rbac.models import UserRole
 
 # 缓存 key 前缀与 TTL
-PERM_CACHE_PREFIX = 'user:perms:'
+PERM_CACHE_PREFIX = "user:perms:"
 PERM_CACHE_TTL = 300
 
 
 def perm_cache_key(user_id: int) -> str:
     """生成用户权限缓存的 key."""
-    return f'{PERM_CACHE_PREFIX}{user_id}'
+    return f"{PERM_CACHE_PREFIX}{user_id}"
 
 
 def invalidate_user_perms(user_id: int) -> None:
@@ -26,12 +26,7 @@ def invalidate_user_perms(user_id: int) -> None:
 
 def invalidate_role_perms(role_id: int) -> None:
     """清除某角色下所有用户的权限缓存."""
-    user_ids = (
-        UserRole.objects
-        .filter(role_id=role_id)
-        .values_list('user_id', flat=True)
-        .distinct()
-    )
+    user_ids = UserRole.objects.filter(role_id=role_id).values_list("user_id", flat=True).distinct()
     keys = [perm_cache_key(uid) for uid in user_ids]
     if keys:
         cache.delete_many(keys)

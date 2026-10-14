@@ -19,73 +19,69 @@ from rbac.serializers import (
 class RoleViewSet(ModelViewSet):
     """角色的 CRUD 接口 + 角色权限分配."""
 
-    queryset = Role.objects.all().order_by('-id')
+    queryset = Role.objects.all().order_by("-id")
     serializer_class = RoleSerializer
 
     permission_classes = [HasPerm]
     required_perms = {
-        'GET': ['rbac:role:read'],
-        'POST': ['rbac:role:manage'],
-        'PUT': ['rbac:role:manage'],
-        'PATCH': ['rbac:role:manage'],
-        'DELETE': ['rbac:role:manage'],
+        "GET": ["rbac:role:read"],
+        "POST": ["rbac:role:manage"],
+        "PUT": ["rbac:role:manage"],
+        "PATCH": ["rbac:role:manage"],
+        "DELETE": ["rbac:role:manage"],
     }
 
     # 过滤 / 搜索 / 排序
-    filterset_fields = ['code', 'name']
-    search_fields = ['name', 'code', 'description']
-    ordering_fields = ['id', 'code', 'name', 'created_at']
+    filterset_fields = ["code", "name"]
+    search_fields = ["name", "code", "description"]
+    ordering_fields = ["id", "code", "name", "created_at"]
 
     def perform_update(self, serializer):
         """内置角色: 禁止修改 code."""
         instance = serializer.instance
-        if instance.is_builtin and 'code' in serializer.validated_data:
-            if serializer.validated_data['code'] != instance.code:
-                raise PermissionDenied('内置角色的 code 不可修改')
+        if instance.is_builtin and "code" in serializer.validated_data:
+            if serializer.validated_data["code"] != instance.code:
+                raise PermissionDenied("内置角色的 code 不可修改")
         serializer.save()
 
     def perform_destroy(self, instance):
         """内置角色: 禁止删除."""
         if instance.is_builtin:
-            raise PermissionDenied('内置角色不可删除')
+            raise PermissionDenied("内置角色不可删除")
         instance.delete()
 
     @extend_schema(
-        methods=['GET'],
-        summary='列出某角色的权限',
+        methods=["GET"],
+        summary="列出某角色的权限",
         responses={200: RolePermissionSerializer(many=True)},
     )
     @extend_schema(
-        methods=['POST'],
-        summary='给角色分配权限',
+        methods=["POST"],
+        summary="给角色分配权限",
         request=RolePermissionInputSerializer,
         responses={
             201: RolePermissionSerializer,
-            200: OpenApiResponse(description='已存在, 幂等返回'),
-            404: OpenApiResponse(description='角色或权限不存在'),
+            200: OpenApiResponse(description="已存在, 幂等返回"),
+            404: OpenApiResponse(description="角色或权限不存在"),
         },
     )
-    @action(detail=True, methods=['get', 'post'], url_path='permissions')
+    @action(detail=True, methods=["get", "post"], url_path="permissions")
     def permissions(self, request, pk=None):
         """GET  列出某角色的权限.
         POST 给某角色加权限 (body: {"permission_id": 1}).
         """
         role = get_object_or_404(Role, pk=pk)
 
-        if request.method == 'GET':
-            qs = RolePermission.objects.filter(role=role).select_related('permission')
+        if request.method == "GET":
+            qs = RolePermission.objects.filter(role=role).select_related("permission")
             return Response(RolePermissionSerializer(qs, many=True).data)
 
         # POST
         input_ser = RolePermissionInputSerializer(data=request.data)
         input_ser.is_valid(raise_exception=True)
-        permission = get_object_or_404(
-            Permission, pk=input_ser.validated_data['permission_id']
-        )
+        permission = get_object_or_404(Permission, pk=input_ser.validated_data["permission_id"])
 
-        obj, created = RolePermission.objects.get_or_create(
-            role=role, permission=permission
-        )
+        obj, created = RolePermission.objects.get_or_create(role=role, permission=permission)
         # 清该角色下所有用户的权限缓存
         invalidate_role_perms(role.id)
         return Response(
@@ -94,27 +90,25 @@ class RoleViewSet(ModelViewSet):
         )
 
     @extend_schema(
-        summary='移除角色的某个权限',
+        summary="移除角色的某个权限",
         parameters=[
-            OpenApiParameter('pk', int, OpenApiParameter.PATH, description='角色 id'),
-            OpenApiParameter('permission_id', int, OpenApiParameter.PATH, description='权限 id'),
+            OpenApiParameter("pk", int, OpenApiParameter.PATH, description="角色 id"),
+            OpenApiParameter("permission_id", int, OpenApiParameter.PATH, description="权限 id"),
         ],
         responses={
-            204: OpenApiResponse(description='删除成功'),
-            404: OpenApiResponse(description='关联不存在'),
+            204: OpenApiResponse(description="删除成功"),
+            404: OpenApiResponse(description="关联不存在"),
         },
     )
     @action(
         detail=True,
-        methods=['delete'],
-        url_path=r'permissions/(?P<permission_id>\d+)',
+        methods=["delete"],
+        url_path=r"permissions/(?P<permission_id>\d+)",
     )
     def remove_permission(self, request, pk=None, permission_id=None):
         """DELETE /api/rbac/roles/{pk}/permissions/{permission_id}/ 移除某角色的某权限."""
         role = get_object_or_404(Role, pk=pk)
-        obj = get_object_or_404(
-            RolePermission, role=role, permission_id=permission_id
-        )
+        obj = get_object_or_404(RolePermission, role=role, permission_id=permission_id)
         obj.delete()
         # 清该角色下所有用户的权限缓存
         invalidate_role_perms(role.id)

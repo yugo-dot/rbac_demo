@@ -1,0 +1,10 @@
+# pre-commit 配置: git commit 前自动跑 ruff
+# 安装: docker compose exec web pre-commit install
+# 手动全量跑: docker compose exec web pre-commit run --all-files
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

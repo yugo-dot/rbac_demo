@@ -4,10 +4,10 @@ from .role_permission import RolePermissionInputSerializer, RolePermissionSerial
 from .user_role import UserRoleInputSerializer, UserRoleSerializer
 
 __all__ = [
-    'RoleSerializer',
-    'PermissionSerializer',
-    'UserRoleSerializer',
-    'UserRoleInputSerializer',
-    'RolePermissionSerializer',
-    'RolePermissionInputSerializer',
+    "RoleSerializer",
+    "PermissionSerializer",
+    "UserRoleSerializer",
+    "UserRoleInputSerializer",
+    "RolePermissionSerializer",
+    "RolePermissionInputSerializer",
 ]

@@ -28,7 +28,7 @@ class HasPerm(BasePermission):
             return True
 
         # 从视图取所需权限
-        required = getattr(view, 'required_perms', None)
+        required = getattr(view, "required_perms", None)
         if not required:
             # 视图没声明, 视为不需要权限 (只要登录就行)
             return True

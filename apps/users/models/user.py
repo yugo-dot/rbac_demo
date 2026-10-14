@@ -13,15 +13,13 @@ class User(AbstractUser):
     """
 
     phone = models.CharField(
-        max_length=20, unique=True, null=True, blank=True, verbose_name='手机号'
+        max_length=20, unique=True, null=True, blank=True, verbose_name="手机号"
     )
-    email = models.EmailField(
-        unique=True, null=True, blank=True, verbose_name='邮箱'
-    )
+    email = models.EmailField(unique=True, null=True, blank=True, verbose_name="邮箱")
 
     class Meta:
-        db_table = 'user'
-        verbose_name = '用户'
+        db_table = "user"
+        verbose_name = "用户"
         verbose_name_plural = verbose_name
 
     def __str__(self):
@@ -44,9 +42,8 @@ class User(AbstractUser):
             return set(cached)
 
         codes = list(
-            Permission.objects
-            .filter(rolepermission__role__userrole__user=self)
-            .values_list('code', flat=True)
+            Permission.objects.filter(rolepermission__role__userrole__user=self)
+            .values_list("code", flat=True)
             .distinct()
         )
         cache.set(key, codes, PERM_CACHE_TTL)
