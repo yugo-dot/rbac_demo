@@ -41,13 +41,15 @@ class LoginSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         refresh = RefreshToken.for_user(instance)
+        # 从 Profile 取展示类信息
+        profile = getattr(instance, 'profile', None)
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user': {
                 'id': instance.id,
                 'username': instance.username,
-                'nickname': instance.nickname,
+                'nickname': profile.nickname if profile else '',
                 'phone': instance.phone,
                 'email': instance.email,
             },

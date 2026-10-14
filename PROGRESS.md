@@ -42,14 +42,16 @@ rbac_demo/
 │   ├── __init__.py
 │   ├── users/
 │   │   ├── models/
-│   │   │   ├── __init__.py      (导出 User)
-│   │   │   └── user.py          (User 继承 AbstractUser)
+│   │   │   ├── __init__.py      (导出 User / UserProfile)
+│   │   │   ├── user.py          (User 继承 AbstractUser)
+│   │   │   └── profile.py       (UserProfile, OneToOne 关联 User)
 │   │   ├── serializers/
 │   │   │   ├── __init__.py      (导出 LoginSerializer)
 │   │   │   └── auth.py
 │   │   ├── views/
 │   │   │   ├── __init__.py      (导出 LoginView)
 │   │   │   └── auth.py
+│   │   ├── signals.py           (post_save -> 自动建 Profile)
 │   │   ├── urls.py
 │   │   ├── admin.py
 │   │   ├── apps.py
@@ -111,6 +113,7 @@ rbac_demo/
 - [x] RBAC 四张表 (Role / Permission / UserRole / RolePermission)
 - [x] 迁移成功, 数据库表已建
 - [x] models / serializers / views 拆成包
+- [x] 拆分 UserProfile (nickname / avatar / bio / gender / birthday / location), signal 自动创建
 - [x] User.get_permission_codes() 方法
 - [x] JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
 - [x] 角色 / 权限的 CRUD 接口 (ModelViewSet + DefaultRouter)
@@ -131,6 +134,8 @@ rbac_demo/
 - 354815d feat: 自定义权限类 HasPerm
 - 46336a1 feat: 示例文章接口 + RBAC 保护验证 (手动 + 单元测试)
 - 1aa3d5e docs: PROGRESS.md 补充 commit 记录
+- b3f41a3 docs: 重写 PROGRESS.md, 与实际代码对齐
+- 87a2f13 feat: 拆分 UserProfile, 展示类字段从 User 移出
 
 ## 七、下一步
 
@@ -164,12 +169,17 @@ git add . && git commit -m "xxx"
 
 # 模型
 cat apps/users/models/user.py
+cat apps/users/models/profile.py
 cat apps/users/models/__init__.py
 cat apps/rbac/models/__init__.py
 cat apps/rbac/models/role.py
 cat apps/rbac/models/permission.py
 cat apps/rbac/models/user_role.py
 cat apps/rbac/models/role_permission.py
+
+# signals 与 app 配置
+cat apps/users/signals.py
+cat apps/users/apps.py
 
 # 序列化器
 cat apps/users/serializers/auth.py
@@ -213,6 +223,10 @@ cat apps/articles/tests.py
   注意容器里 startapp 生成的目录属主是 root, mv 前需 sudo 或改属主
 - 注意: User.email 是 unique, create_user 不传 email 会写 '' 导致第二个用户冲突;
   代码里创建用户时要么传真实 email, 要么显式传 None
+- User / UserProfile 拆分: 登录相关 (username / password / email / phone) 留在 User;
+  展示类 (nickname / avatar / bio / gender / birthday / location) 放 UserProfile
+- UserProfile 用 OneToOneField(User, related_name='profile')
+- 新建 User 时通过 post_save signal 自动创建 UserProfile (apps/users/signals.py)
 
 ## 十二、协作方式约定
 
