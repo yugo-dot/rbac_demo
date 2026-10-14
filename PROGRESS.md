@@ -44,33 +44,30 @@
 - [x] Django admin 注册 (8 个模型; 内置角色/权限只读 + 审计日志全只读)
 - [x] 演示数据种子命令 (seed_demo: 10 用户 / 4 角色 / 2000 文章, 幂等 + --flush)
 - [x] ABAC 性能优化 (DB 粗筛 + Casbin 精筛; enforce 2000 -> 1180 次, 0.41s -> 0.27s)
+- [x] 用户资料修改接口 (PATCH /api/users/me/, 读写序列化器分离)
 
 ## 二、下一步
 
 第一阶段 (基础 RBAC 闭环) + 第二阶段 (ABAC + 审计 + CI + admin) 已完成.
 以下候选方向 (未开始, 排序即推荐顺序):
 
-1. [ ] 用户资料修改接口
-   - 现状: GET /api/users/me/ 只读, 不能改 nickname / avatar / bio 等
-   - 目标: 加 PATCH /api/users/me/, 支持改 UserProfile 字段
-
-2. [ ] 权限点按模块分组
+1. [ ] 权限点按模块分组
    - 现状: Permission 没有 module 字段, 靠命名约定 (rbac:role:read)
    - 目标: 加 module 字段, 前端可按模块折叠展示
 
-3. [ ] 数据级权限细化 (visibility)
+2. [ ] 数据级权限细化 (visibility)
    - 现状: Article 有 visibility 字段 (private/team/public), 但策略没用它
    - 目标: 加策略, 让 visibility 真正影响可见性
 
-4. [ ] CI 通知 (搁置)
+3. [ ] CI 通知 (搁置)
    - 曾尝试 PushPlus / Server酱, 都因收费或额度放弃
    - 可选: Server酱 免费版 (每天 5 条) 或不做
 
 ## 补充说明 (给接手的 AI)
 
-- 上一阶段刚做完: ABAC 性能优化 (DB 粗筛 + Casbin 精筛)
+- 上一阶段刚做完: 用户资料修改接口 (PATCH /api/users/me/)
 - 远端: origin=Gitee, github=GitHub, 两边都推
-- CI: GitHub Actions 已跑通 (63 测试, ~1.5 分钟)
+- CI: GitHub Actions 已跑通 (68 测试, ~1.5 分钟)
 - 本地测试命令: docker compose exec web python manage.py test users rbac articles
 - 本地数据: 10 用户 (admin/admin + user01~09) / 4 角色 / 2000 文章 / 13 权限 / 5 Casbin 策略
 - 重造数据: docker compose exec web python manage.py seed_demo --flush --articles 2000

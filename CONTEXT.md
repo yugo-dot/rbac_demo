@@ -385,6 +385,15 @@ cat docker-compose.yml
   - 未继续优化的原因: 剩余 1180 行按当前策略无法在 DB 层判定不可见,
     再压需把 Casbin 策略翻译成 SQL WHERE, 复杂度高且非主流
   - 后续真实项目应配分页 (只对当前页精筛), 而非继续抠单次 enforce 常数
+- 用户资料修改接口 (PATCH /api/users/me/):
+  - 读写序列化器分离: 读用 MeSerializer, 写用 MeUpdateSerializer (主流做法)
+  - 可写字段: UserProfile 的 nickname / avatar / bio / gender / birthday / location
+  - 不可写: username / phone / email / is_superuser / permissions
+  - 写用 MeUpdateSerializer (source=profile.xxx 嵌套写, 覆盖 update 拆嵌套),
+    响应统一用 MeSerializer 返回完整资源 (REST 惯例, 前端不用再 GET 一次)
+  - get_serializer_class 按 request.method 分派: PUT/PATCH -> MeUpdateSerializer
+  - 测试: users/tests.py 的 MeViewTests 覆盖 5 个 PATCH 用例
+    (未登录 / 成功 / 部分字段 / 只读字段被忽略 / gender 非法)
 
 ## 八、协作方式约定
 

@@ -64,6 +64,71 @@ class MeViewTests(APITestCase):
         self.assertEqual(data["phone"], "13800000001")
         self.assertEqual(sorted(data["permissions"]), ["article:create", "article:read"])
 
+    def test_patch_no_token_returns_401(self):
+        """未登录 PATCH -> 401."""
+        resp = self.client.patch(self.url, {"nickname": "x"}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_patch_updates_profile_and_returns_full_resource(self):
+        """PATCH 成功 -> 200, DB 变更, 响应是完整字段 (MeSerializer)."""
+        token = self._login("alice", "alice12345")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        resp = self.client.patch(
+            self.url,
+            {"nickname": "新名字", "bio": "简介", "gender": 1},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        # 响应是完整资源 (含 id/username/permissions)
+        self.assertEqual(resp.data["username"], "alice")
+        self.assertIn("permissions", resp.data)
+        self.assertEqual(resp.data["nickname"], "新名字")
+
+        self.alice.profile.refresh_from_db()
+        self.assertEqual(self.alice.profile.nickname, "新名字")
+        self.assertEqual(self.alice.profile.bio, "简介")
+        self.assertEqual(self.alice.profile.gender, 1)
+
+    def test_patch_partial_fields_leave_others_unchanged(self):
+        """PATCH 只传一个字段, 其余保持原样."""
+        token = self._login("alice", "alice12345")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        resp = self.client.patch(self.url, {"nickname": "只改昵称"}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        self.alice.profile.refresh_from_db()
+        self.assertEqual(self.alice.profile.nickname, "只改昵称")
+        # 原 bio 是空串, 不应变
+        self.assertEqual(self.alice.profile.bio, "")
+
+    def test_patch_ignores_readonly_fields(self):
+        """传 username / is_superuser 等只读字段, 应被忽略."""
+        token = self._login("alice", "alice12345")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        resp = self.client.patch(
+            self.url,
+            {"username": "hacked", "is_superuser": True, "nickname": "ok"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        self.alice.refresh_from_db()
+        self.assertEqual(self.alice.username, "alice")
+        self.assertFalse(self.alice.is_superuser)
+        self.alice.profile.refresh_from_db()
+        self.assertEqual(self.alice.profile.nickname, "ok")
+
+    def test_patch_invalid_gender_returns_400(self):
+        """gender 传非法值 -> 400."""
+        token = self._login("alice", "alice12345")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        resp = self.client.patch(self.url, {"gender": 99}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class RegisterTests(APITestCase):
     """验证 POST /api/users/register/."""
