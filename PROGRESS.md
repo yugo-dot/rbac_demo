@@ -67,13 +67,16 @@ rbac_demo/
 │   │   │   ├── user_role.py
 │   │   │   └── role_permission.py
 │   │   ├── serializers/
-│   │   │   ├── __init__.py      (导出 RoleSerializer / PermissionSerializer)
+│   │   │   ├── __init__.py      (统一导出)
 │   │   │   ├── role.py
-│   │   │   └── permission.py
+│   │   │   ├── permission.py
+│   │   │   ├── user_role.py
+│   │   │   └── role_permission.py
 │   │   ├── views/
-│   │   │   ├── __init__.py      (导出 RoleViewSet / PermissionViewSet)
-│   │   │   ├── role.py
-│   │   │   └── permission.py
+│   │   │   ├── __init__.py      (统一导出)
+│   │   │   ├── role.py          (含角色权限分配 action)
+│   │   │   ├── permission.py
+│   │   │   └── user_role.py     (用户角色分配 action)
 │   │   ├── permissions.py       (HasPerm 权限类)
 │   │   ├── urls.py              (DefaultRouter 注册)
 │   │   ├── admin.py
@@ -122,6 +125,7 @@ rbac_demo/
 - [x] 自定义权限类 HasPerm (支持 list / dict, 超管放行)
 - [x] 示例接口 + RBAC 保护验证 (app: articles, 手动 curl + 单元测试)
 - [x] 当前用户信息接口 GET /api/users/me/ (返回资料 + 权限编码)
+- [x] 用户-角色 / 角色-权限 分配接口 (GET / POST / DELETE)
 
 ## 六、Git 提交记录
 
@@ -139,12 +143,13 @@ rbac_demo/
 - 1aa3d5e docs: PROGRESS.md 补充 commit 记录
 - b3f41a3 docs: 重写 PROGRESS.md, 与实际代码对齐
 - 9a990f4 feat: 拆分 UserProfile, 展示类字段从 User 移出
+- e090926 feat: 当前用户信息接口 GET /api/users/me/
 
 ## 七、下一步
 
 第一阶段 (基础 RBAC 闭环) 已完成. 后续可做方向 (排序即推荐顺序):
 
-1. [ ] 用户 - 角色 / 角色 - 权限 分配接口 (补齐管理面)
+1. [x] 用户 - 角色 / 角色 - 权限 分配接口 (补齐管理面)
 2. [x] 当前用户信息接口 GET /api/users/me/ (返回资料 + 权限编码)
 3. [ ] Redis 缓存 get_permission_codes()
 4. [ ] 接 django-filter + 分页, 完善列表接口
@@ -189,12 +194,15 @@ cat apps/users/serializers/auth.py
 cat apps/users/serializers/user.py
 cat apps/rbac/serializers/role.py
 cat apps/rbac/serializers/permission.py
+cat apps/rbac/serializers/user_role.py
+cat apps/rbac/serializers/role_permission.py
 
 # 视图
 cat apps/users/views/auth.py
 cat apps/users/views/user.py
 cat apps/rbac/views/role.py
 cat apps/rbac/views/permission.py
+cat apps/rbac/views/user_role.py
 cat apps/articles/views.py
 
 # 权限类
@@ -233,6 +241,11 @@ cat apps/users/tests.py
   展示类 (nickname / avatar / bio / gender / birthday / location) 放 UserProfile
 - UserProfile 用 OneToOneField(User, related_name='profile')
 - 新建 User 时通过 post_save signal 自动创建 UserProfile (apps/users/signals.py)
+- 用户-角色 / 角色-权限 分配接口用 ViewSet @action 实现:
+  - UserRoleViewSet 挂在 /api/rbac/users/, 含 roles / remove_role
+  - RoleViewSet 加 permissions / remove_permission
+  - 写入用 get_or_create 保证幂等 (201 新建 / 200 已存在)
+- 现阶段这些接口只要求 IsAuthenticated, 未叠加 HasPerm (等权限数据稳定后再加)
 
 ## 十二、协作方式约定
 
