@@ -30,6 +30,7 @@
 - [x] 测试适配 (种子数据 + 内置保护, 全绿)
 - [x] 文档拆分: CONTEXT.md (稳定) + PROGRESS.md (变动), 砍掉手写 Git 记录
 - [x] 内置角色/权限保护 (is_builtin, 禁止改 code / 禁止删, 8 个种子权限标内置)
+- [x] 代码门禁: ruff + pre-commit (commit 前自动 lint + format)
 
 ## 二、下一步
 
@@ -38,7 +39,7 @@
 1. [x] 内置角色/权限保护 (is_builtin 标记, 禁止删改)
 2. [ ] 用户注册 / 改密 / 刷新 token 接口
 3. [ ] ABAC 数据级权限 (articles 落地)
-4. [ ] 接 CI / pre-commit
+4. [x] 接 pre-commit (ruff), CI 待推 Gitee 时再加
 
 ## 三、当前卡点
 

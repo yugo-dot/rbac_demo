@@ -133,6 +133,7 @@ docker compose logs web --tail 50
 docker compose restart web
 git add . && git commit -m "xxx"
 git log --oneline -10
+pre-commit run --all-files         # 手动全量跑一遍 ruff
 
 ## 六、关键文件内容 (交接时必读)
 
@@ -271,6 +272,15 @@ cat docker-compose.yml
   - 校验在 ViewSet 的 perform_update / perform_destroy 里, 抛 PermissionDenied (403)
   - 超管也不放行 (系统级保护, 跟用户权限无关)
   - 主流参考: Keycloak 内置角色禁止删改, Django Guardian / 葡萄城同类设计
+- 代码门禁: ruff + pre-commit
+  - ruff 负责 lint (E/F/I/UP/B/SIM) + format, 配置在 pyproject.toml
+  - 忽略规则: RUF012 (Django/DRF 类属性惯例), RUF022 (__all__ 顺序), SIM102, E501
+  - 排除 migrations/ (Django 自动生成, 不查)
+  - pre-commit 装在 WSL (pipx 管理), git commit 前自动跑 ruff check --fix + ruff-format
+  - 选双引号 (ruff-format 默认, 与 black 一致)
+  - 首次全量格式化后, 会统一改掉单引号 -> 双引号 (一次性 commit)
+  - pre-commit 装在跑 git 的机器 (WSL), 不是容器; 因为 git commit 在 WSL 执行
+  - CI 暂不做, 等推 Gitee 时再加 Gitee Go 配置
 
 ## 八、协作方式约定
 
