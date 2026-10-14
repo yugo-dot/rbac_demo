@@ -31,13 +31,14 @@
 - [x] 文档拆分: CONTEXT.md (稳定) + PROGRESS.md (变动), 砍掉手写 Git 记录
 - [x] 内置角色/权限保护 (is_builtin, 禁止改 code / 禁止删, 8 个种子权限标内置)
 - [x] 代码门禁: ruff + pre-commit (commit 前自动 lint + format)
+- [x] 注册 / 改密 / 登出 / token 刷新接口 (SimpleJWT blacklist, 改密后强制重登)
 
 ## 二、下一步
 
 第一阶段 (基础 RBAC 闭环) 已完成. 后续候选方向 (排序即推荐顺序):
 
 1. [x] 内置角色/权限保护 (is_builtin 标记, 禁止删改)
-2. [ ] 用户注册 / 改密 / 刷新 token 接口
+2. [x] 用户注册 / 改密 / 刷新 token 接口 (+ 登出)
 3. [ ] ABAC 数据级权限 (articles 落地)
 4. [x] 接 pre-commit (ruff), CI 待推 Gitee 时再加
 

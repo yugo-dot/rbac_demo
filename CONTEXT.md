@@ -272,6 +272,14 @@ cat docker-compose.yml
   - 校验在 ViewSet 的 perform_update / perform_destroy 里, 抛 PermissionDenied (403)
   - 超管也不放行 (系统级保护, 跟用户权限无关)
   - 主流参考: Keycloak 内置角色禁止删改, Django Guardian / 葡萄城同类设计
+- 认证面补全 (注册 / 改密 / 登出 / 刷新 token):
+  - 用 SimpleJWT 的 token_blacklist app 实现"登出 / 改密强制重登"
+  - SIMPLE_JWT: ROTATE_REFRESH_TOKENS=True + BLACKLIST_AFTER_ROTATION=True
+  - 刷新时换发新 refresh, 旧的自动拉黑
+  - 改密成功后遍历 OutstandingToken 把该用户所有 refresh 拉黑, 强制重登
+  - 注册即登录 (直接返回 access/refresh), 密码走 Django validate_password 强度校验
+  - 注册时 email/phone 空串按 None 处理, 避免 unique 冲突
+  - 接口: POST /register/, /logout/, /change-password/, /token/refresh/
 - 代码门禁: ruff + pre-commit
   - ruff 负责 lint (E/F/I/UP/B/SIM) + format, 配置在 pyproject.toml
   - 忽略规则: RUF012 (Django/DRF 类属性惯例), RUF022 (__all__ 顺序), SIM102, E501
