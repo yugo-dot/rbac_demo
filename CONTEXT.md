@@ -48,15 +48,15 @@ rbac_demo/
 │   ├── users/
 │   │   ├── models/
 │   │   │   ├── __init__.py      (导出 User / UserProfile)
-│   │   │   ├── user.py          (User 继承 AbstractUser)
+│   │   │   ├── user.py          (User 继承 AbstractUser + get_permission_codes)
 │   │   │   └── profile.py       (UserProfile, OneToOne 关联 User)
 │   │   ├── serializers/
-│   │   │   ├── __init__.py      (导出 LoginSerializer / MeSerializer)
-│   │   │   ├── auth.py
+│   │   │   ├── __init__.py      (导出 Login/Register/ChangePassword/Me)
+│   │   │   ├── auth.py          (Login/Register/ChangePassword)
 │   │   │   └── user.py          (MeSerializer)
 │   │   ├── views/
-│   │   │   ├── __init__.py      (导出 LoginView / MeView)
-│   │   │   ├── auth.py
+│   │   │   ├── __init__.py      (导出 Login/Register/Logout/ChangePassword/Me)
+│   │   │   ├── auth.py          (登录 / 注册 / 登出 / 改密)
 │   │   │   └── user.py          (MeView)
 │   │   ├── signals.py           (post_save -> 自动建 Profile)
 │   │   ├── urls.py
@@ -67,40 +67,45 @@ rbac_demo/
 │   ├── rbac/
 │   │   ├── models/
 │   │   │   ├── __init__.py      (导出 Role / Permission / UserRole / RolePermission)
-│   │   │   ├── role.py
-│   │   │   ├── permission.py
+│   │   │   ├── role.py          (含 is_builtin)
+│   │   │   ├── permission.py    (含 is_builtin)
 │   │   │   ├── user_role.py
 │   │   │   └── role_permission.py
 │   │   ├── serializers/
-│   │   │   ├── __init__.py      (统一导出)
+│   │   │   ├── __init__.py
 │   │   │   ├── role.py
 │   │   │   ├── permission.py
 │   │   │   ├── user_role.py
-│   │   │   └── role_permission.py
+│   │   │   ├── role_permission.py
+│   │   │   └── policy.py        (PolicySerializer, 策略不是 Django 模型)
 │   │   ├── views/
-│   │   │   ├── __init__.py      (统一导出)
+│   │   │   ├── __init__.py
 │   │   │   ├── role.py          (含角色权限分配 action)
 │   │   │   ├── permission.py
-│   │   │   └── user_role.py     (用户角色分配 action)
-│   │   ├── permissions.py       (HasPerm 权限类)
+│   │   │   ├── user_role.py     (用户角色分配 action)
+│   │   │   └── policy.py        (PolicyViewSet: list / create / destroy)
+│   │   ├── permissions.py       (HasPerm 接口级 + HasAbacPerm 对象级)
 │   │   ├── cache.py             (用户权限缓存失效工具)
+│   │   ├── abac.py              (Casbin enforcer 封装 + Adapter + build_sub)
 │   │   ├── urls.py              (DefaultRouter 注册)
 │   │   ├── admin.py
 │   │   ├── apps.py
 │   │   ├── tests.py
-│   │   └── migrations/          (0003_seed_permissions: 预置权限点)
+│   │   └── migrations/          (0003 种子权限, 0004 is_builtin, 0005 casbin_rule,
+│   │                             0006 article update/delete, 0007 策略种子, 0008 policy 权限)
 │   └── articles/
-│       ├── views.py             (ArticleDemoView, 用 HasPerm 保护)
-│       ├── urls.py
-│       ├── tests.py             (4 个 RBAC 单元测试)
-│       ├── models.py            (空, 仅占位)
+│       ├── models.py            (Article: author / status / visibility)
+│       ├── serializers.py       (ArticleSerializer)
+│       ├── views.py             (ArticleViewSet, 两层权限保护)
+│       ├── urls.py              (DefaultRouter 注册)
+│       ├── tests.py             (9 个 ABAC 单元测试)
 │       ├── admin.py
 │       ├── apps.py
 │       └── migrations/
 ├── config/
 │   ├── settings/
 │   │   ├── __init__.py
-│   │   ├── base.py              (公共配置)
+│   │   ├── base.py              (公共配置 + CASBIN_MODEL + SIMPLE_JWT blacklist)
 │   │   ├── dev.py               (DEBUG=True, ALLOWED_HOSTS=['*'])
 │   │   └── prod.py              (DEBUG=False, ALLOWED_HOSTS 从环境变量读)
 │   ├── urls.py
@@ -110,6 +115,9 @@ rbac_demo/
 ├── docker-compose.yml
 ├── requirements.txt
 ├── manage.py
+├── casbin_model.conf            (Casbin ABAC 模型定义)
+├── pyproject.toml               (ruff 配置)
+├── .pre-commit-config.yaml      (pre-commit 配置)
 ├── CONTEXT.md                   (本文件, 稳定上下文)
 └── PROGRESS.md                  (进度, 每次改动更新)
 

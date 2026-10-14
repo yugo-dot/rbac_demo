@@ -24,3 +24,6 @@ db.sqlite3
 
 # Docker
 *.pid
+
+# ruff 缓存
+.ruff_cache/
