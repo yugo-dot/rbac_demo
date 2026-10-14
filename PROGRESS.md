@@ -76,6 +76,7 @@ rbac_demo/
 - [x] 迁移成功, 数据库表已建
 - [x] models 拆成包
 - [x] User.get_permission_codes() 方法
+- [x] JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
 
 ## 六、Git 提交记录
 
@@ -87,7 +88,7 @@ rbac_demo/
 ## 七、下一步
 
 1. [x] 给 User 加方法: get_permission_codes()
-2. [ ] 写 JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
+2. [x] 写 JWT 登录接口 (用户名 / 手机号 / 邮箱 三选一)
 3. [ ] 写角色 / 权限的 CRUD 接口
 4. [ ] 写自定义权限类 HasPerm
 5. [ ] 用 RBAC 保护示例接口, 写测试验证
