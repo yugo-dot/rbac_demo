@@ -1,22 +1,22 @@
-"""Django settings for config project."""
+"""Django base settings (公共配置)."""
 
 import os
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 # 项目根目录
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # 把 apps/ 加入 Python 路径, 这样可以直接 import users / rbac
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 
-# 安全配置
-SECRET_KEY = 'django-insecure-3xj@bd%-n=g$^p^4b6nk)hd8qhl&^94aukt4sv!vpqrrh4c7iy'
-
-DEBUG = True
-
-ALLOWED_HOSTS = []
+# 安全配置 (从环境变量读, 有默认值)
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-3xj@bd%-n=g$^p^4b6nk)hd8qhl&^94aukt4sv!vpqrrh4c7iy',
+)
 
 
 # 应用注册
@@ -114,17 +114,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 
-# 缓存 (Redis)
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://redis:6379/1',
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'IGNORE_EXCEPTIONS': True,
-        },
+# 缓存
+# 跑测试时用 locmem, 避免污染生产 Redis; 其他场景用 Redis.
+if 'test' in sys.argv:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': 'redis://redis:6379/1',
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'IGNORE_EXCEPTIONS': True,
+            },
+        }
+    }
 
 
 # DRF 配置
@@ -148,8 +156,6 @@ REST_FRAMEWORK = {
 
 
 # SimpleJWT 配置
-from datetime import timedelta
-
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),

@@ -93,7 +93,11 @@ rbac_demo/
 │       ├── apps.py
 │       └── migrations/
 ├── config/
-│   ├── settings.py
+│   ├── settings/
+│   │   ├── __init__.py
+│   │   ├── base.py              (公共配置)
+│   │   ├── dev.py               (DEBUG=True, ALLOWED_HOSTS=['*'])
+│   │   └── prod.py              (DEBUG=False, ALLOWED_HOSTS 从环境变量读)
 │   ├── urls.py
 │   ├── asgi.py
 │   └── wsgi.py
@@ -109,7 +113,7 @@ rbac_demo/
 - 权限编码格式: 模块:操作 (例如 article:create, user:delete)
 - models / serializers / views 统一拆成包, 每个业务模块一个文件, __init__.py 统一导出
 - apps 下的业务 app 直接放在 apps/ 下, INSTALLED_APPS 里用不带 apps. 前缀的名字 (例如 'users' / 'rbac' / 'articles')
-- settings: 暂不拆分 base/dev/prod, 等部署前再拆
+- settings 已拆 base/dev/prod, 通过 DJANGO_SETTINGS_MODULE 选择, 默认 dev
 
 ## 五、已完成
 
@@ -129,6 +133,7 @@ rbac_demo/
 - [x] 用户-角色 / 角色-权限 分配接口 (GET / POST / DELETE)
 - [x] Redis 缓存 get_permission_codes (key user:perms:{uid}, TTL 300s, 变动时主动清)
 - [x] 分页 + django-filter + 搜索 + 排序 (Role / Permission 列表)
+- [x] settings 拆分 base/dev/prod (通过 DJANGO_SETTINGS_MODULE 选择)
 
 ## 六、Git 提交记录
 
@@ -149,6 +154,7 @@ rbac_demo/
 - e090926 feat: 当前用户信息接口 GET /api/users/me/
 - cfc58b5 feat: 用户-角色 / 角色-权限 分配接口 (ViewSet @action)
 - 19cfa00 feat: Redis 缓存 get_permission_codes (主动失效 + TTL 兜底)
+- a97881a feat: 分页 + django-filter + 搜索 + 排序 (Role / Permission 列表)
 
 ## 七、下一步
 
@@ -159,7 +165,7 @@ rbac_demo/
 3. [x] Redis 缓存 get_permission_codes()
 4. [x] 接 django-filter + 分页, 完善列表接口
 5. [ ] 接 shared-nginx 对外暴露
-6. [ ] settings 拆 base/dev/prod
+6. [x] settings 拆 base/dev/prod
 
 ## 八、当前卡点
 
@@ -221,7 +227,9 @@ cat apps/rbac/urls.py
 cat apps/articles/urls.py
 
 # 配置
-cat config/settings.py
+cat config/settings/base.py
+cat config/settings/dev.py
+cat config/settings/prod.py
 
 # 测试
 cat apps/articles/tests.py
@@ -260,6 +268,11 @@ cat apps/users/tests.py
   - RoleViewSet: filterset_fields=['code','name'], search_fields=['name','code','description'], ordering_fields=['id','code','name','created_at']
   - PermissionViewSet: 同上
   - 子列表 (users/{id}/roles/, roles/{id}/permissions/) 不分页
+- settings 拆分: base / dev / prod, 通过环境变量 DJANGO_SETTINGS_MODULE 选择;
+  manage.py / wsgi.py / asgi.py 默认指向 config.settings.dev;
+  docker-compose.yml 里通过环境变量指定, 生产改为 config.settings.prod
+- 测试环境缓存隔离: base.py 里检测 sys.argv 里有没有 'test',
+  有则用 LocMemCache, 否则用 Redis; 避免测试数据写脏生产 Redis
 
 ## 十二、协作方式约定
 
