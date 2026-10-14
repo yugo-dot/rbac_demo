@@ -275,3 +275,115 @@ class BuiltinProtectionTests(APITestCase):
         url = f"/api/rbac/roles/{role.id}/"
         resp = self.client.delete(url)
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+
+class PolicyManagementTests(APITestCase):
+    """验证 /api/rbac/policies/ 策略管理接口."""
+
+    url = "/api/rbac/policies/"
+
+    @classmethod
+    def setUpTestData(cls):
+        # 两个用户: admin 有策略管理权限, viewer 只有读权限
+        cls.policy_read = Permission.objects.get(code="rbac:policy:read")
+        cls.policy_manage = Permission.objects.get(code="rbac:policy:manage")
+
+        role_admin = Role.objects.create(name="策略管理员", code="policy_admin")
+        RolePermission.objects.create(role=role_admin, permission=cls.policy_read)
+        RolePermission.objects.create(role=role_admin, permission=cls.policy_manage)
+
+        role_viewer = Role.objects.create(name="策略查看", code="policy_viewer")
+        RolePermission.objects.create(role=role_viewer, permission=cls.policy_read)
+
+        cls.admin = User.objects.create_user(
+            username="policy_admin", password="admin12345", email="pa@example.com"
+        )
+        UserRole.objects.create(user=cls.admin, role=role_admin)
+
+        cls.viewer = User.objects.create_user(
+            username="policy_viewer", password="viewer12345", email="pv@example.com"
+        )
+        UserRole.objects.create(user=cls.viewer, role=role_viewer)
+
+    def _login(self, username, password):
+        resp = self.client.post(
+            "/api/users/login/",
+            {"username": username, "password": password},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        return resp.data["access"]
+
+    def test_unauthenticated_returns_401(self):
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_viewer_can_list(self):
+        """有 rbac:policy:read 的用户能看策略列表."""
+        token = self._login("policy_viewer", "viewer12345")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        # 种子数据里有 5 条策略
+        self.assertEqual(len(resp.data), 5)
+
+    def test_viewer_cannot_create(self):
+        """只有 read 权限的用户加策略 -> 403."""
+        token = self._login("policy_viewer", "viewer12345")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        resp = self.client.post(
+            self.url,
+            {"sub_rule": "r.sub.id == 999", "obj": "article", "act": "read"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_create_policy(self):
+        """有 manage 权限的用户加策略 -> 201, 列表变 6 条."""
+        token = self._login("policy_admin", "admin12345")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        resp = self.client.post(
+            self.url,
+            {"sub_rule": "r.sub.id == 999", "obj": "article", "act": "read"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data["sub_rule"], "r.sub.id == 999")
+
+        list_resp = self.client.get(self.url)
+        self.assertEqual(len(list_resp.data), 6)
+
+    def test_admin_add_duplicate_returns_200(self):
+        """重复加同一策略 -> 200 (幂等), 列表不变."""
+        token = self._login("policy_admin", "admin12345")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        data = {"sub_rule": "r.sub.id == 999", "obj": "article", "act": "read"}
+        self.client.post(self.url, data, format="json")
+        resp = self.client.post(self.url, data, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        list_resp = self.client.get(self.url)
+        self.assertEqual(len(list_resp.data), 6)
+
+    def test_admin_can_delete_policy(self):
+        """删策略 -> 204, 列表变 4 条."""
+        token = self._login("policy_admin", "admin12345")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        # 先加一条, 再删
+        create_resp = self.client.post(
+            self.url,
+            {"sub_rule": "r.sub.id == 999", "obj": "article", "act": "read"},
+            format="json",
+        )
+        policy_id = create_resp.data["id"]
+        resp = self.client.delete(f"{self.url}{policy_id}/")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+        list_resp = self.client.get(self.url)
+        self.assertEqual(len(list_resp.data), 5)
+
+    def test_delete_nonexistent_returns_404(self):
+        token = self._login("policy_admin", "admin12345")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        resp = self.client.delete(f"{self.url}99999/")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)

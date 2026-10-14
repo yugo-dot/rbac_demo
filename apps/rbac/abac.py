@@ -121,3 +121,24 @@ def build_sub(user) -> dict:
         "is_superuser": user.is_superuser,
         "role": role_code,
     }
+
+
+def list_policies_with_id() -> list[dict]:
+    """列出所有策略, 带上 casbin_rule 表的自增 id (供 REST 接口用).
+
+    返回: [{"id": 1, "sub_rule": "...", "obj": "article", "act": "read"}, ...]
+    """
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id, v0, v1, v2 FROM casbin_rule WHERE ptype='p' ORDER BY id")
+        rows = cursor.fetchall()
+    return [{"id": row[0], "sub_rule": row[1], "obj": row[2], "act": row[3]} for row in rows]
+
+
+def remove_policy_by_id(policy_id: int) -> bool:
+    """按 casbin_rule 表的自增 id 删策略, 返回是否删除成功."""
+    with connection.cursor() as cursor:
+        cursor.execute("DELETE FROM casbin_rule WHERE id=%s AND ptype='p'", [policy_id])
+        deleted = cursor.rowcount > 0
+    if deleted:
+        clear_enforcer_cache()
+    return deleted
